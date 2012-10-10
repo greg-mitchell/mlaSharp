@@ -6,7 +6,7 @@ namespace mlaSharp
 	/// <summary>
 	/// A generic player in the game.  Exposes methods to enumerate and perform game actions
 	/// </summary>
-	public class Player
+	public abstract class Player
 	{
 		public string Name { get; private set;}
 		public GameEngine Env { get; private set;}
@@ -23,10 +23,9 @@ namespace mlaSharp
 			this.ManaPool = new ManaPool();
 		}
 		
-		public State GetCurrState()
-		{
-			return Env.GetCurrState();
-		}
+		public abstract bool MulliganHand();
+		
+		public abstract GameActionDelegate GetAction();
 	}
 	
 	public class ManaPool

@@ -66,5 +66,16 @@ namespace mlaSharp
 			this.T = toughness;
 		}
 	}
+	
+	[System.AttributeUsage(System.AttributeTargets.Class)]
+	public class CardAttribute : System.Attribute
+	{
+		private string _name;
+		
+		public CardAttribute(string name)
+		{
+			_name = name;	
+		}
+	}
 }
 

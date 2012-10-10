@@ -7,20 +7,20 @@ namespace mlaSharp
 {
 	public class GameEngine
 	{
-		#region Game Constants
-		public static readonly int STARTING_HAND_SIZE = 7;
-		#endregion
+		public const int STARTING_HAND_SIZE = 7;
+		
 		private State CurrState {get; set;}
 		
 		private List<Player> players;
-		private Dictionary<Player,List<Card>> libraries;
+		private Dictionary<Player,Library> libraries;
+		private Dictionary<Player,int> initialHandSize;
 		private RandomNumberGenerator rng;
 		
 		public GameEngine ()
 		{
 			CurrState = new State();
 			players = new List<Player>();
-			libraries = new Dictionary<Player, List<Card>>();
+			libraries = new Dictionary<Player, Library>();
 			rng = new RNGCryptoServiceProvider();
 		}
 		
@@ -48,7 +48,7 @@ namespace mlaSharp
 		/// <param name='deck'>
 		/// The initialized deck to add.  The deck will be shuffled before starting.
 		/// </param>
-		public void AddPlayer(Player p, List<Card> deck)
+		public void AddPlayer(Player p, Library deck)
 		{
 			players.Add(p);
 			libraries[p] = deck;			
@@ -63,10 +63,11 @@ namespace mlaSharp
 			byte[] buf = new byte[1];
 			int n = players.Count;
 			do rng.GetBytes(buf);
-			while((box[0] < n * (Byte.MaxValue / n)));
-			int k = (box[0] % n);
+			while((buf[0] < n * (Byte.MaxValue / n)));
+			int k = (buf[0] % n);
 			
 			System.Console.WriteLine(String.Format("Game started.  Player {0} ({1}) plays first.",k+1,players[k].Name));
+			CurrState.PlayerWithPriority = players[k];
 			
 			// shuffle libraries
 			foreach(Player p in players)
@@ -76,22 +77,82 @@ namespace mlaSharp
 			// create an ordered list of players who have not kept
 			List<Player> notKept = new List<Player>(n);
 			// create a dictionary of player -> hand size to keep track of how many cards to mulligan to
-			Dictionary<Player,int> handSize = new Dictionary<Player, int>(n);
+			initialHandSize = new Dictionary<Player, int>(n);
 			// initialize both structures
 			for(int i = 0; i < n; i++)
 			{
 				Player pcurr = players[(i+k)%n];
 				notKept.Add(pcurr);
-				handSize[pcurr] = STARTING_HAND_SIZE;
+				initialHandSize[pcurr] = STARTING_HAND_SIZE;
 			}
 			
-			int i = 0;
+			int j = 0;
 			while(notKept.Count > 0)
 			{
-				notKept[i].Hand.Clear();
-				var hand = libraries[notKept[i]].Take(handSize[notKept[i]]);
-				notKept[i].Hand.AddRange(hand);
+				Player p = notKept[j];
+				libraries[p].AddRange(p.Hand);
+				p.Hand.Clear();
+				var hand = libraries[p].Draw (initialHandSize[p]);
+				p.Hand.AddRange(hand);
+				
+				j = (j+1) % n;	
+				
+				if(!p.MulliganHand())
+				{
+					notKept.Remove (p);
+				}
+				else
+				{
+					initialHandSize[p]--;
+				}				
 			}
+			
+			CurrState.CurrStep = Steps.main1;
+			
+			MainGameLoop();
+		}
+		
+		/// <summary>
+		/// The main game loop.
+		/// On every iteration, checks state-based actions, then polls the player with priority for an action.
+		/// </summary>
+		private void MainGameLoop()
+		{
+			while(true)
+			{
+				IEnumerable<Player> losingPlayers;
+				if((losingPlayers = CheckPlayerLost()) != null)
+				{
+					foreach(Player p in losingPlayers)
+						Console.WriteLine(String.Format("Player {0} lost!",p.Name));
+					
+					break;
+				}
+				
+				DoSBA();
+				
+				var action = CurrState.PlayerWithPriority.GetAction();
+				action(CurrState.PlayerWithPriority,CurrState);
+			}
+		}
+		
+		/// <summary>
+		/// Performs State-based actions (except for a player losing).
+		/// </summary>
+		private void DoSBA()
+		{
+			
+		}
+		
+		/// <summary>
+		/// Returns a list of players that have lost.
+		/// </summary>
+		/// <returns>
+		/// The players who have lost.
+		/// </returns>
+		private IEnumerable<Player> CheckPlayerLost()
+		{
+			return null;
 		}
 		
 		/// <summary>

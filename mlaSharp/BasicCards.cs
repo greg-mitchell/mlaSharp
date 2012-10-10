@@ -3,6 +3,7 @@ using mlaSharp;
 
 namespace CardDatabase
 {
+	[Card("Mountain")]
 	public class Mountain : Card
 	{
 		public Mountain(Player owner)
@@ -21,6 +22,7 @@ namespace CardDatabase
 		}
 	}
 	
+	[Card("Goblin Piker")]
 	public class GoblinPiker : CreatureCard
 	{
 		public GoblinPiker(Player owner)
