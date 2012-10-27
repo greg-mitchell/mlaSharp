@@ -36,6 +36,11 @@ namespace mlaSharp
 			this.Status = StatusEnum.Default;
 		}
 		
+		public override string ToString ()
+		{
+			return Name;
+		}
+		
 		/// <summary>
 		/// Enumeration of card statuses.  0 is:
 		/// untapped, face up, phased in, and unflipped.

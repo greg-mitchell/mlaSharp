@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace mlaSharp
 {
@@ -10,11 +12,11 @@ namespace mlaSharp
 		
 		public override bool MulliganHand()
 		{
-			Console.WriteLine(" > Hand:");
-			Console.Write(" > ");
-			foreach(Card c in Hand)
-				Console.Write(String.Format("{0};",c.Name));
-			Console.WriteLine(" > Mulligan hand? (y/n):");	
+			Console.Write("Player " + this.Name + "'s Hand:");
+			foreach(Card c in Env.GetCurrState().Hands[this])
+				Console.Write(String.Format("\n\t{0},",c.Name));
+			Console.WriteLine("\nMulligan hand? (y/n):");	
+			Console.Write ("mla> ");
 			string input = Console.In.ReadLine();
 			if(input.Contains("n"))
 				return false;
@@ -24,7 +26,17 @@ namespace mlaSharp
 		
 		public override GameActionDelegate GetAction() 
 		{
-			return null;
+			var actions = Env.EnumActions(this);
+			Console.WriteLine("Select Action:");
+			for(int i = 0; i < actions.Count(); i++)
+				Console.WriteLine("\n\t" + i + ":" + actions[i]);
+			
+			int actionNum = -1;
+			do
+				Console.WriteLine("mla> ");
+			while (!(Int32.TryParse(Console.In.ReadLine(),out actionNum)) && actionNum >= 0 && actionNum < actions.Count());
+			
+			return actions[actionNum];
 		}
 	}
 }

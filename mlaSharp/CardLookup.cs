@@ -20,7 +20,7 @@ namespace CardDatabase
 			
 			foreach(Type t in cardTypes)
 			{
-				mlaSharp.Card c = (mlaSharp.Card)Activator.CreateInstance (t,null);	
+				mlaSharp.Card c = (mlaSharp.Card)Activator.CreateInstance (t,true);	
 				_db[c.Name] = c;
 			}
 		}

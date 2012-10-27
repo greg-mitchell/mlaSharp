@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mlaSharp", "mlaSharp\mlaSha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardDatabase", "CardDatabase\CardDatabase.csproj", "{6FD26571-69D0-4F31-B9EE-D70984F65BC4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mlaSharpTests", "mlaSharpTests\mlaSharpTests.csproj", "{613C7271-44A2-4817-BBFD-ED71F52D4753}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -15,6 +17,10 @@ Global
 		{31BD965A-9DFC-4472-81D3-AEA451EF05DB}.Debug|x86.Build.0 = Debug|x86
 		{31BD965A-9DFC-4472-81D3-AEA451EF05DB}.Release|x86.ActiveCfg = Release|x86
 		{31BD965A-9DFC-4472-81D3-AEA451EF05DB}.Release|x86.Build.0 = Release|x86
+		{613C7271-44A2-4817-BBFD-ED71F52D4753}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{613C7271-44A2-4817-BBFD-ED71F52D4753}.Debug|x86.Build.0 = Debug|Any CPU
+		{613C7271-44A2-4817-BBFD-ED71F52D4753}.Release|x86.ActiveCfg = Release|Any CPU
+		{613C7271-44A2-4817-BBFD-ED71F52D4753}.Release|x86.Build.0 = Release|Any CPU
 		{6FD26571-69D0-4F31-B9EE-D70984F65BC4}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{6FD26571-69D0-4F31-B9EE-D70984F65BC4}.Debug|x86.Build.0 = Debug|Any CPU
 		{6FD26571-69D0-4F31-B9EE-D70984F65BC4}.Release|x86.ActiveCfg = Release|Any CPU

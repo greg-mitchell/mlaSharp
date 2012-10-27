@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Linq;
 
 namespace mlaSharp
@@ -11,22 +10,46 @@ namespace mlaSharp
 		
 		private State CurrState {get; set;}
 		
-		private List<Player> players;
+		public List<Player> Players { get; private set; }
 		private Dictionary<Player,Library> libraries;
 		private Dictionary<Player,int> initialHandSize;
-		private RandomNumberGenerator rng;
+		private Random rng;
 		
 		public GameEngine ()
 		{
-			CurrState = new State();
-			players = new List<Player>();
+			CurrState = new State(this);
+			Players = new List<Player>();
 			libraries = new Dictionary<Player, Library>();
-			rng = new RNGCryptoServiceProvider();
+			rng = new CryptoRandom();
 		}
 		
 		public List<GameActionDelegate> EnumActions(Player p)
 		{
-			throw new NotImplementedException();
+			var actions = new List<GameActionDelegate>();
+			// if it's a main phase of the current player's turn, the stack is empty, and that player has priority, 
+			// he can play sorcery speed effects
+			if(p == CurrState.PlayersTurn 
+			   && p == CurrState.PlayerWithPriority 
+			   && (CurrState.CurrStep == Steps.main1 || CurrState.CurrStep == Steps.main2) 
+			   && CurrState.Stack.Count == 0)
+			{
+				// if a land has not been played this turn, can play a land
+				if(CurrState.LandsLeftToPlayThisTurn > 0)
+				{
+					var lands = from c in CurrState.Hands[CurrState.PlayerWithPriority]
+								where c.Type.Contains("Land") 
+								select c;
+					foreach(Card land in lands)
+					{
+						actions.Add((Player player, State s) => {
+							s.Battlefield.Add(land);
+							s.Hands[player].Remove(land);
+						});
+					}
+				}
+			}
+			
+			return actions;
 		}
 		
 		public State GetCurrState()
@@ -36,7 +59,7 @@ namespace mlaSharp
 		
 		public void PerformAction(GameActionDelegate action)
 		{
-			
+			action(CurrState.PlayerWithPriority,CurrState);
 		}
 		
 		/// <summary>
@@ -50,27 +73,25 @@ namespace mlaSharp
 		/// </param>
 		public void AddPlayer(Player p, Library deck)
 		{
-			players.Add(p);
+			Players.Add(p);
 			libraries[p] = deck;			
 		}
 		
 		public void StartGame()
 		{
-			if(players.Count != 2)
+			if(Players.Count != 2)
 				throw new NotImplementedException("The game engine currently only supports exactly 2 players");
 			
-			// randomize starting player
-			byte[] buf = new byte[1];
-			int n = players.Count;
-			do rng.GetBytes(buf);
-			while((buf[0] < n * (Byte.MaxValue / n)));
-			int k = (buf[0] % n);
+			int n = Players.Count;
+			var playOrder = Enumerable.Range(0,n).ToList();
+			playOrder.Shuffle(rng);
+			int k = playOrder[0];
 			
-			System.Console.WriteLine(String.Format("Game started.  Player {0} ({1}) plays first.",k+1,players[k].Name));
-			CurrState.PlayerWithPriority = players[k];
+			System.Console.WriteLine(String.Format("Game started.  Player {0} plays first.",k+1,Players[k].Name));
+			CurrState.PlayerWithPriority = Players[k];
 			
 			// shuffle libraries
-			foreach(Player p in players)
+			foreach(Player p in Players)
 				libraries[p].Shuffle(rng);
 			
 			// draw opening hands and resolve mulligans
@@ -81,7 +102,7 @@ namespace mlaSharp
 			// initialize both structures
 			for(int i = 0; i < n; i++)
 			{
-				Player pcurr = players[(i+k)%n];
+				Player pcurr = Players[(i+k)%n];
 				notKept.Add(pcurr);
 				initialHandSize[pcurr] = STARTING_HAND_SIZE;
 			}
@@ -90,13 +111,11 @@ namespace mlaSharp
 			while(notKept.Count > 0)
 			{
 				Player p = notKept[j];
-				libraries[p].AddRange(p.Hand);
-				p.Hand.Clear();
+				libraries[p].AddRange(CurrState.Hands[p]);
+				CurrState.Hands[p].Clear();
 				var hand = libraries[p].Draw (initialHandSize[p]);
-				p.Hand.AddRange(hand);
-				
-				j = (j+1) % n;	
-				
+				CurrState.Hands[p].AddRange(hand);
+								
 				if(!p.MulliganHand())
 				{
 					notKept.Remove (p);
@@ -105,8 +124,13 @@ namespace mlaSharp
 				{
 					initialHandSize[p]--;
 				}				
+				
+				
+				j = (j+1) %  ((notKept.Count > 0) ? notKept.Count : 1);	
 			}
 			
+			CurrState.PlayersTurn = Players[k];
+			CurrState.PlayerWithPriority = Players[k];
 			CurrState.CurrStep = Steps.main1;
 			
 			MainGameLoop();
@@ -141,7 +165,7 @@ namespace mlaSharp
 		/// </summary>
 		private void DoSBA()
 		{
-			
+			/// TODO: check for SBAs
 		}
 		
 		/// <summary>
@@ -152,6 +176,7 @@ namespace mlaSharp
 		/// </returns>
 		private IEnumerable<Player> CheckPlayerLost()
 		{
+			// TODO: check for players losing
 			return null;
 		}
 		

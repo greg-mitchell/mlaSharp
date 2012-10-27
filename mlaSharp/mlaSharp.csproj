@@ -50,6 +50,8 @@
     <Compile Include="Card.cs" />
     <Compile Include="CardLookup.cs" />
     <Compile Include="BasicCards.cs" />
+    <Compile Include="CryptoRandom.cs" />
+    <Compile Include="ManaPool.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

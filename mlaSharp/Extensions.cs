@@ -52,26 +52,18 @@ namespace mlaSharp
 		/// <typeparam name='T'>
 		/// The 1st type parameter.
 		/// </typeparam>
-		public static void Shuffle<T>(this List<T> list, RandomNumberGenerator rng)
-		{
-			if(list.Count >= Byte.MaxValue) throw new ArgumentOutOfRangeException("The list to shuffle must contain less than 255 elements");
-		    for(int n = list.Count; n > 1; n--)
-		    {
-				
-		        byte[] box = new byte[1];
-				
-				// ensure box[0] % n is unbiased
-		        do rng.GetBytes(box);
-		        while (!(box[0] < n * (Byte.MaxValue / n)));
-								
-				// swap element 'n' with a random earlier element 'k' (or itself)
-		        int k = (box[0] % n);
-		        T value = list[k];
-		        list[k] = list[n];
-		        list[n] = value;
-		    }
-
+		 public static void Shuffle<T>(this IList<T> list, Random rnd) 
+		 {
+	        int n = list.Count;
+	        
+	        while (n > 1) {
+	            int k = rnd.Next(0, n);
+	            n--;
+	            T value = list[k];
+	            list[k] = list[n];
+	            list[n] = value;
+	        }
 		}
-	}
+    }	
 }
 
