@@ -18,11 +18,12 @@ namespace CardDatabase
 			ActivatedAbilities.Add(new Ability(	
 				(Player p, State s) => 
 					{
-						return (this.Status & Card.StatusEnum.Tapped) == Card.StatusEnum.Default;
+					 		return (this.Status & Card.StatusEnum.Tapped) == Card.StatusEnum.Default;
 					},
 				(Player p, State s) =>
 					{
 						s.ManaPools[p].R++;
+						this.Status |= Card.StatusEnum.Tapped;
 					}
 			));
 		}

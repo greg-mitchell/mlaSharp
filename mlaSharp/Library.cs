@@ -36,8 +36,16 @@ namespace mlaSharp
 		/// <summary>
 		/// Draw a card.
 		/// </summary>
+		/// <exception cref="PlayerLostException">
+		/// Throws a <see cref="PlayerLostException"> if there are no cards in library and the player attempts to draw a card.
+		/// </exception>
 		public Card Draw()
 		{
+			if(this.Count == 0)
+			{
+				throw new PlayerLostException("Drawing a card with no cards left in library",null,Owner);
+			}
+			
 			Card item = this[0];
 			this.RemoveAt(0);	
 			return item;
@@ -49,8 +57,16 @@ namespace mlaSharp
 		/// <param name='x'>
 		/// The number of cards to draw
 		/// </param>
+		/// <exception cref="PlayerLostException">
+		/// Throws a <see cref="PlayerLostException"> if there are no cards in library and the player attempts to draw a card.
+		/// </exception>
 		public IEnumerable<Card> Draw(int x)
 		{
+			if(this.Count < x)
+			{
+				throw new PlayerLostException("Drawing a card with no cards left in library",null,Owner);	
+			}
+			
 			var cards = this.Take(x);
 			this.RemoveRange(0,x);
 			return cards;

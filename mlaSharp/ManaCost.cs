@@ -27,6 +27,9 @@ namespace mlaSharp
 		/// </remarks>
 		public bool UnpayableManaCost { get; private set;}
 		
+		private ManaPool cost;
+		
+		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="mlaSharp.ManaCost"/> class.
 		/// </summary>
@@ -39,10 +42,37 @@ namespace mlaSharp
 			Colors = this.Colors.SetColors(manaCostString);
 			UnpayableManaCost = false;
 			CMC = 0;
-			setCmc();			
+			cost = new ManaPool();
+			setCmcAndCost();	
+			
 		}
 		
-		private void setCmc()
+		public bool CanCast(ManaPool floating)
+		{
+			if(UnpayableManaCost)
+				return false;
+			
+			ManaPool subtractedPool = new ManaPool(floating);
+			bool coloredOk = true;
+			coloredOk &= (subtractedPool.W -= cost.W) >= 0;
+			coloredOk &= (subtractedPool.U -= cost.U) >= 0;
+			coloredOk &= (subtractedPool.B -= cost.B) >= 0;
+			coloredOk &= (subtractedPool.R -= cost.R) >= 0;
+			coloredOk &= (subtractedPool.G -= cost.G) >= 0;
+			
+			if(!coloredOk)
+				return false;
+			
+			subtractedPool.Generic += subtractedPool.W
+				+ subtractedPool.U
+				+ subtractedPool.B
+				+ subtractedPool.R
+				+ subtractedPool.G;
+			
+			return subtractedPool.Generic >= cost.Generic;
+		}
+		
+		private void setCmcAndCost()
 		{
 			/* grammar for mana cost strings:
 			 * <s> 		-> <nums> | {}
@@ -72,6 +102,7 @@ namespace mlaSharp
 			if(len == 1 && !parseSuccessful)
 			{
 				CMC = ManaCostString.Length;
+				parseManaCostStringLetters(ManaCostString);
 				return;
 			}
 			
@@ -79,6 +110,7 @@ namespace mlaSharp
 			if(len == ManaCostString.Length && parseSuccessful)
 			{
 				CMC = numResult;
+				cost.Generic += numResult;
 				return;
 			}
 			
@@ -86,6 +118,34 @@ namespace mlaSharp
 			int generic = Int32.Parse(ManaCostString.Substring(0,--len));
 			int letters = ManaCostString.Substring(len).Length;
 			CMC = generic + letters;
+			cost.Generic += generic;
+			parseManaCostStringLetters(ManaCostString.Substring(len));
+		}
+		
+		private void parseManaCostStringLetters(string toParse)
+		{
+			string manaCostStringLower = toParse.ToLower();
+			foreach(char c in manaCostStringLower)
+			{
+				switch(c)
+				{
+				case 'w':
+					cost.W++;
+					break;
+				case 'u':
+					cost.U++;
+					break;
+				case 'b':
+					cost.B++;
+					break;
+				case 'r':
+					cost.R++;
+					break;
+				case 'g':
+					cost.G++;
+					break;
+				}				
+			}
 		}
 	}
 }

@@ -1,18 +1,28 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="mlaSharpUnitTests/Main.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="mlaSharp/GameEngine.cs">
     <Files>
-      <File FileName="mlaSharp/Card.cs" Line="41" Column="16" />
-      <File FileName="mlaSharp/BasicCards.cs" Line="15" Column="84" />
-      <File FileName="mlaSharp/Player.cs" Line="1" Column="1" />
-      <File FileName="mlaSharp/GameEngine.cs" Line="24" Column="41" />
-      <File FileName="mlaSharp/ConsolePlayer.cs" Line="1" Column="1" />
-      <File FileName="mlaSharp/Library.cs" Line="1" Column="1" />
-      <File FileName="mlaSharpUnitTests/Main.cs" Line="15" Column="1" />
+      <File FileName="mlaSharp/Card.cs" Line="17" Column="1" />
+      <File FileName="mlaSharp/ConsolePlayer.cs" Line="93" Column="1" />
+      <File FileName="mlaSharp/Library.cs" Line="25" Column="1" />
+      <File FileName="mlaSharp/CardLookup.cs" Line="23" Column="1" />
+      <File FileName="mlaSharp/Player.cs" Line="25" Column="4" />
+      <File FileName="mlaSharp/ManaPool.cs" Line="51" Column="93" />
+      <File FileName="mlaSharp/GameEngine.cs" Line="85" Column="46" />
+      <File FileName="mlaSharp/Ability.cs" Line="15" Column="1" />
+      <File FileName="mlaSharp/ManaCost.cs" Line="45" Column="4" />
+      <File FileName="mlaSharp/State.cs" Line="13" Column="1" />
+      <File FileName="mlaSharp/StackObject.cs" Line="37" Column="1" />
+      <File FileName="mlaSharp/BasicCards.cs" Line="21" Column="8" />
+      <File FileName="mlaSharp/Main.cs" Line="29" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="/media/data/Dropbox/Documents/2012 Fall/Research/mlaSharp/mlaSharp/BasicCards.cs" line="25" />
+      <Breakpoint file="/media/data/Dropbox/Documents/2012 Fall/Research/mlaSharp/mlaSharp/GameEngine.cs" line="77" />
+      <Breakpoint file="/media/data/Dropbox/Documents/2012 Fall/Research/mlaSharp/mlaSharp/GameEngine.cs" line="347" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>
