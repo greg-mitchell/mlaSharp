@@ -27,8 +27,9 @@ namespace mlaSharp
 		/// </remarks>
 		public bool UnpayableManaCost { get; private set;}
 		
-		private ManaPool cost;
+		public int GenericMana { get; private set; }
 		
+		private int[] coloredSymbols = new int[Conversions.NUMBER_OF_COLOR_FIELDS];
 		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="mlaSharp.ManaCost"/> class.
@@ -42,9 +43,20 @@ namespace mlaSharp
 			Colors = this.Colors.SetColors(manaCostString);
 			UnpayableManaCost = false;
 			CMC = 0;
-			cost = new ManaPool();
 			setCmcAndCost();	
 			
+		}
+		
+		/// <summary>
+		/// Gets the number of mana symbols of the specified <see cref="ColorsEnum">color</see>
+		/// </summary>
+		/// <param name='color'>
+		/// Color.
+		/// </param>
+		public int this[ColorsEnum color]
+		{
+			get { return coloredSymbols[Conversions.ColorsEnumToIndex(color)]; }
+			private set { coloredSymbols[Conversions.ColorsEnumToIndex(color)] = value; }
 		}
 		
 		public bool CanCast(ManaPool floating)
@@ -54,11 +66,10 @@ namespace mlaSharp
 			
 			ManaPool subtractedPool = new ManaPool(floating);
 			bool coloredOk = true;
-			coloredOk &= (subtractedPool.W -= cost.W) >= 0;
-			coloredOk &= (subtractedPool.U -= cost.U) >= 0;
-			coloredOk &= (subtractedPool.B -= cost.B) >= 0;
-			coloredOk &= (subtractedPool.R -= cost.R) >= 0;
-			coloredOk &= (subtractedPool.G -= cost.G) >= 0;
+			foreach(ColorsEnum color in Enum.GetValues(typeof(ColorsEnum)))
+			{
+				coloredOk &= (subtractedPool[color] -= this[color]) >= 0;
+			}
 			
 			if(!coloredOk)
 				return false;
@@ -69,7 +80,7 @@ namespace mlaSharp
 				+ subtractedPool.R
 				+ subtractedPool.G;
 			
-			return subtractedPool.Generic >= cost.Generic;
+			return subtractedPool.Generic >= GenericMana;
 		}
 		
 		private void setCmcAndCost()
@@ -110,7 +121,7 @@ namespace mlaSharp
 			if(len == ManaCostString.Length && parseSuccessful)
 			{
 				CMC = numResult;
-				cost.Generic += numResult;
+				GenericMana += numResult;
 				return;
 			}
 			
@@ -118,7 +129,7 @@ namespace mlaSharp
 			int generic = Int32.Parse(ManaCostString.Substring(0,--len));
 			int letters = ManaCostString.Substring(len).Length;
 			CMC = generic + letters;
-			cost.Generic += generic;
+			GenericMana += generic;
 			parseManaCostStringLetters(ManaCostString.Substring(len));
 		}
 		
@@ -130,19 +141,19 @@ namespace mlaSharp
 				switch(c)
 				{
 				case 'w':
-					cost.W++;
+					this[ColorsEnum.White]++;
 					break;
 				case 'u':
-					cost.U++;
+					this[ColorsEnum.Blue]++;
 					break;
 				case 'b':
-					cost.B++;
+					this[ColorsEnum.Black]++;
 					break;
 				case 'r':
-					cost.R++;
+					this[ColorsEnum.Red]++;
 					break;
 				case 'g':
-					cost.G++;
+					this[ColorsEnum.Green]++;
 					break;
 				}				
 			}

@@ -65,6 +65,7 @@ namespace mlaSharp
 			ObjectType = objectType;
 			TypeString = typeString;
 			Text = text;
+			Owner = owner;
 			Controller = controller;
 			Colors = colors;
 			ResolutionAction = resolutionAction;

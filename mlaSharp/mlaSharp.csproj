@@ -41,7 +41,6 @@
     <Compile Include="State.cs" />
     <Compile Include="GameEngine.cs" />
     <Compile Include="Ability.cs" />
-    <Compile Include="ColorsEnum.cs" />
     <Compile Include="ManaCost.cs" />
     <Compile Include="StackObject.cs" />
     <Compile Include="Extensions.cs" />
@@ -53,6 +52,7 @@
     <Compile Include="CryptoRandom.cs" />
     <Compile Include="ManaPool.cs" />
     <Compile Include="PlayerLostException.cs" />
+    <Compile Include="shared.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

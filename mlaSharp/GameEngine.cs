@@ -74,7 +74,7 @@ namespace mlaSharp
 					foreach(Card spell in sorcerySpeedSpells)
 					{
 						// this doesn't work for sorceries
-						StackObject so = new StackObject( StackObject.StackObjectType.Card, spell.Type, spell.Text, spell.Owner, spell.Controller, spell.Colors, 
+						StackObject so = new StackObject( StackObject.StackObjectType.Card, spell.Type, spell.Text, spell.Owner, spell.Owner, spell.Colors, 
 						                       (Player Player, State s) => { s.Battlefield.Add(spell); spell.Controller = Player;});
 						var actionDescription = new ActionDescriptionTuple()
 							{
@@ -82,7 +82,7 @@ namespace mlaSharp
 									(Player player, State s) => {
 										s.Stack.Add(so);										
 										s.Hands[player].Remove(spell);
-										// TODO: remove mana from mana pool
+										RemoveManaFromPool(s.ManaPools[p],spell.Cost);
 									},
 								ActionDescription =
 									"Cast " + spell.Name	
@@ -323,6 +323,45 @@ namespace mlaSharp
 			return lost;
 		}
 		
+		private void RemoveManaFromPool(ManaPool pool, ManaCost cost)
+		{
+			// pay colored costs
+			var ColorsEnumValues = Enum.GetValues(typeof(ColorsEnum));
+			foreach(ColorsEnum color in ColorsEnumValues)
+			{
+				pool[color] -= cost[color];
+			}
+			
+			// pay generic costs
+			int genericCost = cost.GenericMana;
+			
+			// if can pay with only generic mana, do so
+			if(pool.Generic - genericCost >= 0)
+			{
+				pool.Generic -= genericCost;
+				return;
+			}
+			
+			// otherwise, pay for generic costs by looking through each color
+			genericCost -= pool.Generic;
+			pool.Generic = 0;
+			foreach(ColorsEnum color in ColorsEnumValues)
+			{
+				// if there's enough mana in the current color to pay the rest of the cost,
+				// pay it and break
+				// otherwise, subtract what we can
+				if(pool[color] - genericCost >= 0)
+				{
+					pool[color] -= genericCost;
+					genericCost = 0;
+					break;
+				}
+				
+				genericCost -= pool[color];
+				pool[color] -= pool[color];				
+			}
+		}
+		
 		private void Resolve(StackObject spell)
 		{
 			/*
@@ -361,37 +400,5 @@ namespace mlaSharp
 	}
 	
 	
-	/// <summary>
-	/// A function that performs a game action
-	/// </summary>
-	public delegate void GameActionDelegate(Player p, State s);
-	
-	/// <summary>
-	/// Action description tuple.
-	/// </summary>
-	public struct ActionDescriptionTuple
-	{
-		public GameActionDelegate GameAction;
-		public String ActionDescription;
-	}
-	
-	/// <summary>
-	/// Sequential steps in the game
-	/// </summary>
-	public enum Steps
-	{
-		untap,
-		upkeep,
-		draw,
-		main1,
-		beginCombat,
-		declareAtk,
-		declareBlk,
-		damage,
-		endCombat,
-		main2,
-		end,
-		cleanup
-	}
 }
 
