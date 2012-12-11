@@ -9,21 +9,22 @@ namespace mlaSharp
 		public const int STARTING_HAND_SIZE = 7;
 		public const int STARTING_LIFE_TOTAL = 20;
 		
+		public int currentPlayerIndex;
 		private State CurrState {get; set;}
 		
 		public List<Player> Players { get; private set; }
-		private Dictionary<Player,Library> libraries;
+		public Dictionary<Player,Library> Libraries { get; private set; }
+		public IDictionary<CreatureCard,IList<CreatureCard>> AttackersToBlockersDictionary { get; private set; }		
+		public Player DefendingPlayer {get; private set;}
 		private Dictionary<Player,int> initialHandSize;
 		private Random rng;
 		
-		private int currentPlayerIndex;
 		private List<Player> lostPlayers;
 		
 		public GameEngine ()
 		{
-			CurrState = new State(this);
 			Players = new List<Player>();
-			libraries = new Dictionary<Player, Library>();
+			Libraries = new Dictionary<Player, Library>();
 			rng = new CryptoRandom();
 		}
 		
@@ -35,6 +36,27 @@ namespace mlaSharp
 			   && p == CurrState.PlayerWithPriority 
 			   && CurrState.Stack.Count == 0)
 			{
+							
+				// move to the next step
+				var moveToNextStep = new ActionDescriptionTuple()
+				{
+					GameAction = (Player player, State s) => { s.MoveToNextStep(); },
+					ActionDescription = "Move to the next step."
+				};
+				actions.Add(moveToNextStep);
+				
+				// for convience, an end turn action is available
+				var endTurn = new ActionDescriptionTuple()
+				{
+					GameAction = (Player Player, State s) => {
+						do
+							s.MoveToNextStep();
+						while(s.CurrStep != Steps.main1);
+					},
+					ActionDescription = "Move to the next turn"
+					
+				};
+				actions.Add(endTurn);
 				
 				// if it's a main phase, sorcery speed effects can be played
 				if((CurrState.CurrStep == Steps.main1 || CurrState.CurrStep == Steps.main2))
@@ -53,6 +75,7 @@ namespace mlaSharp
 										(Player player, State s) => {
 											s.Battlefield.Add(land);
 											s.Hands[player].Remove(land);
+											land.ControlTimestamp = s.TurnNumber;
 											land.Controller = player;
 											s.LandsLeftToPlayThisTurn--;
 										},
@@ -75,7 +98,11 @@ namespace mlaSharp
 					{
 						// this doesn't work for sorceries
 						StackObject so = new StackObject( StackObject.StackObjectType.Card, spell.Type, spell.Text, spell.Owner, spell.Owner, spell.Colors, 
-						                       (Player Player, State s) => { s.Battlefield.Add(spell); spell.Controller = Player;});
+						                       (Player Player, State s) => { 
+													s.Battlefield.Add(spell); 
+													spell.ControlTimestamp = s.TurnNumber;
+													spell.Controller = Player;
+												});
 						var actionDescription = new ActionDescriptionTuple()
 							{
 								GameAction = 
@@ -91,57 +118,78 @@ namespace mlaSharp
 					}
 				}
 				
-				// move to the next step
-				var moveToNextStep = new ActionDescriptionTuple()
+				// -- combat --
+				// declareAtk
+				if(p == CurrState.PlayersTurn 
+				   && CurrState.CurrStep == Steps.declareAtk
+				   && !CurrState.AttackersDeclared)
 				{
-					GameAction = (Player player, State s) => { s.MoveToNextStep(); },
-					ActionDescription = "Move to the next step."
-				};
-				actions.Add(moveToNextStep);
-				
-				// for convience, an end turn action is available
-				var endTurn = new ActionDescriptionTuple()
-				{
-					GameAction = (Player Player, State s) => {
-						s.MoveToNextStep();
-						currentPlayerIndex = ++currentPlayerIndex % Players.Count;
-						s.PlayersTurn = Players[currentPlayerIndex];
-						s.PlayerWithPriority = s.PlayersTurn;						
-						s.Untap();
-						s.Hands[s.PlayersTurn].Add(libraries[s.PlayersTurn].Draw());
-						s.CurrStep = Steps.main1;
-						s.LandsLeftToPlayThisTurn = 1;
-					},
-					ActionDescription = "Move to the next turn"
+					var possibleAttackers = (from c in CurrState.Battlefield
+						where c.Controller == CurrState.PlayersTurn
+						where c.Type.Contains("Creature")
+						where c.ControlTimestamp < CurrState.TurnNumber
+						select c as CreatureCard)
+						.ToList();
 					
-				};
-				actions.Add(endTurn);
+					if(possibleAttackers.Count() > 0)
+					{
+						// TODO: change implementation to allow attacking planeswalkers, multiplayer, etc
+						var chosenAttackers = p.ChooseAttackers(possibleAttackers);
+						
+						// create attackers to blockers dictionary that will be passed to defending player
+						AttackersToBlockersDictionary = new Dictionary<CreatureCard,IList<CreatureCard>>();
+						foreach(var creature in chosenAttackers)
+						{
+							AttackersToBlockersDictionary[creature] = new List<CreatureCard>();
+						}
+						DefendingPlayer = Players[(currentPlayerIndex + 1) % Players.Count];
+					}
+				}
+				
+				if(p == CurrState.PlayersTurn
+				   && CurrState.CurrStep == Steps.declareBlk
+				   && AttackersToBlockersDictionary != null
+				   && AttackersToBlockersDictionary.Count > 0
+				   && !CurrState.BlockersDeclared)
+				{					
+					var possibleBlockers = (from c in CurrState.Battlefield
+						where c.Controller == DefendingPlayer
+						where c.Type.Contains("Creature")
+						select c as CreatureCard)
+						.ToList();	
+					
+					if(possibleBlockers.Count() > 0)
+					{
+						DefendingPlayer.ChooseBlockers(AttackersToBlockersDictionary, possibleBlockers);
+						p.OrderBlockers(AttackersToBlockersDictionary);
+					}
+				}
+				
 			}
 			
 			// "instant" speed effects, such as activated abilities, instants
 			if( p == CurrState.PlayerWithPriority)
 			{
 				// check for activated abilities
-				foreach(Card c in CurrState.Battlefield)
+				
+				// note, this where clause assumes that only the controllers of cards can activate their abilities
+				// not true for Oona's Prowler, Mindslaver, etc
+				var abilitiesAvailable = from card in CurrState.Battlefield
+						where card.Controller == CurrState.PlayerWithPriority
+						from ab in card.ActivatedAbilities
+							where ab.AbilityAvailable(p,CurrState)
+						select Tuple.Create(card,ab);
+				
+				foreach(var tuple in abilitiesAvailable)
 				{
-					// note, this assumes that only the controllers of cards can activate their abilities
-					// not true for Oona's Prowler, Mindslaver, etc
-					if(c.Controller != p)
-						continue;
-					
-					foreach(var ability in c.ActivatedAbilities)
+					var abilityAction = new ActionDescriptionTuple()
 					{
-						if(ability.AbilityAvailable(p,CurrState))
-						{
-							var abilityAction = new ActionDescriptionTuple()
-							{
-								GameAction = ability.AbilityAction,
-								ActionDescription = c.Name + "'s activated ability"
-							};
-							actions.Add (abilityAction);
-						}
-					}
-				}
+						GameAction = tuple.Item2.AbilityAction,
+						ActionDescription = tuple.Item1.Name + "'s activated ability"
+					};
+					actions.Add (abilityAction);
+					
+				}	
 				
 				// TODO: allow casting instants
 			}
@@ -173,7 +221,7 @@ namespace mlaSharp
 		public void AddPlayer(Player p, Library deck)
 		{
 			Players.Add(p);
-			libraries[p] = deck;			
+			Libraries[p] = deck;			
 		}
 		
 		public void StartGame()
@@ -191,6 +239,7 @@ namespace mlaSharp
 			System.Console.WriteLine(String.Format("Game started.  Player {0} plays first.",k+1,Players[k].Name));
 			
 			// initialize state
+			CurrState = new State(this);
 			CurrState.PlayersTurn = Players[k];
 			CurrState.PlayerWithPriority = Players[k];
 			CurrState.CurrStep = Steps.main1;
@@ -199,7 +248,7 @@ namespace mlaSharp
 			// shuffle libraries & initialize state dictionaries
 			foreach(Player p in Players)
 			{
-				libraries[p].Shuffle(rng);
+				Libraries[p].Shuffle(rng);
 				CurrState.ManaPools[p] = new ManaPool();
 				CurrState.LifeTotals[p] = STARTING_LIFE_TOTAL;
 				CurrState.Hands[p] = new List<Card>();
@@ -225,14 +274,28 @@ namespace mlaSharp
 			while(notKept.Count > 0)
 			{
 				Player p = notKept[j];
-				libraries[p].AddRange(CurrState.Hands[p]);
+				Libraries[p].AddRange(CurrState.Hands[p]);
 				CurrState.Hands[p].Clear();
-				var hand = libraries[p].Draw (initialHandSize[p]);
+				var hand = Libraries[p].Draw (initialHandSize[p]);
 				CurrState.Hands[p].AddRange(hand);
 								
 				if(!p.MulliganHand())
 				{
 					notKept.Remove (p);
+					
+					var handlist = hand.ToList();
+					// sanity checking
+					for(int a = 0; a < handlist.Count; a++)
+					{
+						Card ca, cb;
+						ca = handlist[a];
+						for( int b = a+1; b < handlist.Count; b++)
+						{
+							cb = handlist[b];
+							if(ca == cb)
+								throw new Exception("One card is a reference to another");
+						}
+					}
 				}
 				else
 				{
@@ -303,7 +366,32 @@ namespace mlaSharp
 		/// </summary>
 		private void DoSBA()
 		{
-			/// TODO: check for SBAs
+			// Check for lethal damage
+			var creatures = from c in CurrState.Battlefield
+							where c.Type.Contains("Creature")
+							select c as CreatureCard;
+			
+			// have to separate iterating through the enumeration and removing
+			var markedForDestruction = new HashSet<CreatureCard>();
+			foreach ( CreatureCard c in creatures)
+			{
+				if(c.DamageMarked >= c.T)
+				{
+					markedForDestruction.Add(c);
+				}
+			}
+			
+			foreach(CreatureCard c in markedForDestruction)
+			{
+				CurrState.Battlefield.Remove(c);
+				CurrState.Graveyards[c.Owner].Add(c);
+				// TODO: check dying triggers?
+				
+				// for debugging, print deaths
+				Console.WriteLine(c.Name + ", owned by " + c.Owner + ", died.");
+			}
+			
+			/// TODO: check for other SBAs
 		}
 		
 		/// <summary>
@@ -395,7 +483,7 @@ namespace mlaSharp
 		/// </param>
 		public void ShuffleLibrary(Player p)
 		{
-			libraries[p].Shuffle(rng);
+			Libraries[p].Shuffle(rng);
 		}
 	}
 	

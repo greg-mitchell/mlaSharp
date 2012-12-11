@@ -7,9 +7,9 @@ namespace mlaSharp
 		public static void Main (string[] args)
 		{
 			GameEngine env = new GameEngine();
-			
+			string[] names = {"joe", "bob"};
 			Console.WriteLine("mlaSharp : Magic the Gathering Learning Agent");
-			for(int i = 1; i <= 2; i++)
+			for(int i = 0; i < 2; i++)
 			{
 				
 #if INPUT_DECKLISTS
@@ -20,7 +20,7 @@ namespace mlaSharp
 				Console.Write("Decklist path:\nmla> ");
 				string decklistPath = Console.In.ReadLine ();
 #else
-				Player player = new ConsolePlayer(env,"p" + i);
+				Player player = new ConsolePlayer(env,names[i]);
 				string decklistPath = null;
 #endif				
 				Library lib = null;
@@ -32,6 +32,20 @@ namespace mlaSharp
 				{
 					throw new NotImplementedException("Custom decklists not currently implemented");	
 				}
+				
+				// sanity checking
+				for(int a = 0; a < lib.Count; a++)
+				{
+					Card ca, cb;
+					ca = lib[a];
+					for( int b = a+1; b < lib.Count; b++)
+					{
+						cb = lib[b];
+						if(ca == cb)
+							throw new Exception("One card is a reference to another");
+					}
+				}
+				
 				env.AddPlayer(player,lib);
 				Console.WriteLine("Player " + player.Name + " created!");
 			}

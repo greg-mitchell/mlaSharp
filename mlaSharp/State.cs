@@ -7,9 +7,13 @@ namespace mlaSharp
 {
 	public class State
 	{
-		public Steps CurrStep { get; set;}
-		public Player PlayersTurn { get; set; }
-		public Player PlayerWithPriority { get; set;}
+		public Steps CurrStep;
+		public Player PlayersTurn;
+		public Player PlayerWithPriority;
+		public bool AttackersDeclared;
+		public bool BlockersDeclared;
+		public int LandsLeftToPlayThisTurn;
+		public int TurnNumber;
 		public List<Card> Battlefield { get; private set;}
 		public List<StackObject> Stack { get; private set;}
 		public Dictionary<Player,ManaPool> ManaPools { get; private set; }
@@ -17,12 +21,12 @@ namespace mlaSharp
 		public Dictionary<Player,List<Card>> Hands { get; private set; }
 		public Dictionary<Player,List<Card>> Graveyards { get; private set; }
 		
-		public int LandsLeftToPlayThisTurn { get; set; }
 		
 		private GameEngine env;
 		
 		public State (GameEngine env)
 		{			
+			TurnNumber = 1;
 			Battlefield = new List<Card>();
 			Stack = new List<StackObject>();
 			ManaPools = new Dictionary<Player, ManaPool>();
@@ -73,10 +77,58 @@ namespace mlaSharp
 		{
 			// a little hackish in that it's implementation-dependent
 			// but assuming that the Steps enum is sequential, this trick works
-			CurrStep = (Steps)((int)CurrStep+1);
+			int next = ((int)CurrStep+1) % Conversions.NUMBER_OF_STEPS;
+			CurrStep = (Steps)next;
 			foreach(var mp in ManaPools.Values)
 			{
 				mp.Clear();
+			}
+			switch(CurrStep)
+			{
+			case Steps.cleanup:
+				env.currentPlayerIndex = ++env.currentPlayerIndex % env.Players.Count;
+				PlayersTurn = env.Players[env.currentPlayerIndex];
+				PlayerWithPriority = PlayersTurn;		
+				LandsLeftToPlayThisTurn = 1;
+				TurnNumber++;
+				// TODO implement max hand size
+				
+				// no priority during cleanup so move to next step
+				MoveToNextStep();
+				break;
+			case Steps.untap:				
+				Untap();
+				
+				// no priority during untap so move to next step
+				MoveToNextStep();
+				break;
+			case Steps.draw:
+				Hands[PlayersTurn].Add(env.Libraries[PlayersTurn].Draw());
+				
+				// while dealing with simplified game, skip priority pass
+				MoveToNextStep();
+				break;
+			case Steps.damage:
+				DealDamage();
+				
+				// while dealing with simplified game, skip priority pass
+				MoveToNextStep();
+				break;
+				
+			case Steps.endCombat:
+				if(env.AttackersToBlockersDictionary != null)
+					env.AttackersToBlockersDictionary.Clear();
+								
+				// while dealing with simplified game, skip priority pass
+				MoveToNextStep();
+				break;
+				
+				// while dealing with simplified game, skip most priority passes
+			case Steps.upkeep:
+			case Steps.beginCombat: 
+			case Steps.end:
+				MoveToNextStep();
+				break;
 			}
 		}
 		
@@ -120,6 +172,41 @@ namespace mlaSharp
 			return sb.ToString();
 		}
 		
+		private void DealDamage()
+		{
+			if(env.AttackersToBlockersDictionary == null
+			   || env.AttackersToBlockersDictionary.Count == 0)
+				return;
+			
+			foreach(CreatureCard attacker in env.AttackersToBlockersDictionary.Keys)
+			{
+				// unblocked
+				if(env.AttackersToBlockersDictionary[attacker] == null
+				   || env.AttackersToBlockersDictionary[attacker].Count() == 0)
+				{
+					this.LifeTotals[env.DefendingPlayer] -= attacker.P;
+					Console.WriteLine(env.DefendingPlayer.Name + " takes " + attacker.P + " putting him at " + LifeTotals[env.DefendingPlayer]);
+					continue;
+				}
+				
+				// deal damage to each blocker sequentially and from each blocker to the attacker
+				int damageToDeal = attacker.P;
+				foreach(CreatureCard blocker in env.AttackersToBlockersDictionary[attacker])
+				{
+					if (blocker.T > damageToDeal)
+					{
+						blocker.DamageMarked += damageToDeal;
+					}
+					else
+					{					
+						blocker.DamageMarked += blocker.T;
+						damageToDeal -= blocker.T;
+					}
+					
+					attacker.DamageMarked += blocker.P;
+				}
+			}
+		}
 	}
 }
 

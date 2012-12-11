@@ -17,9 +17,54 @@ namespace mlaSharp
 			this.Env = env;
 		}
 		
+		/// <summary>
+		/// Ask the player whether to mulligan the hand.
+		/// </summary>
+		/// <returns>
+		/// True if mulliganing, false if keeping.
+		/// </returns>
 		public abstract bool MulliganHand();
 		
+		/// <summary>
+		/// Asks the player what action to take.
+		/// </summary>
+		/// <returns>
+		/// The action.
+		/// </returns>
 		public abstract GameActionDelegate GetAction();
+		
+		/// <summary>
+		/// Ask the player to choose the attackers.
+		/// </summary>
+		/// <returns>
+		/// The attackers.
+		/// </returns>
+		/// <param name='possibleAttackers'>
+		/// Set of possible attackers.
+		/// </param>
+		public abstract ISet<CreatureCard> ChooseAttackers(IList<CreatureCard> possibleAttackers);
+		
+		/// <summary>
+		/// Asks the player to choose the blockers.
+		/// </summary>
+		/// <returns>
+		/// The dictionary from attackers to their blockers.
+		/// </returns>
+		/// <param name='chosenAttackers'>
+		/// Chosen attackers.
+		/// </param>
+		/// <param name='possibleBlockers'>
+		/// Possible blockers.
+		/// </param>
+		public abstract void ChooseBlockers(IDictionary<CreatureCard,IList<CreatureCard>> attackersToBlockersDictionary, IList<CreatureCard> possibleBlockers);
+		
+		/// <summary>
+		/// Orders the blockers in the passed dictionary.
+		/// </summary>
+		/// <param name='attackersToBlockersDictionary'>
+		/// Attackers to blockers dictionary.
+		/// </param>
+		public abstract void OrderBlockers(IDictionary<CreatureCard,IList<CreatureCard>> attackersToBlockersDictionary);
 		
 		public override string ToString ()
 		{

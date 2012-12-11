@@ -17,6 +17,7 @@ namespace mlaSharp
 		public Player Controller { get; set;}
 		public ColorsEnum Colors { get; set;}
 		public StatusEnum Status { get; set;}
+		public int ControlTimestamp { get; set; }
 		
 		public List<Ability> ActivatedAbilities { get; private set;}
 		public List<Ability> TriggeredAbilities { get; private set;}
@@ -34,6 +35,7 @@ namespace mlaSharp
 			this.Text = text;
 			this.Colors = this.Colors.SetColors (manaCost);
 			this.Status = StatusEnum.Default;
+			this.ControlTimestamp = Int32.MaxValue;
 		}
 		
 		public override string ToString ()
@@ -63,6 +65,7 @@ namespace mlaSharp
 	{
 		public int P {get; set;}
 		public int T { get; set;}
+		public int DamageMarked { get; set; }
 		
 		public CreatureCard(string name, string type, string manaCost, string text, int power,int toughness)
 			: base(name,type,manaCost,text)

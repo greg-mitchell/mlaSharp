@@ -59,7 +59,10 @@ namespace mlaSharp
 	/// </summary>
 	public static class Conversions
 	{
+		
 		public const int NUMBER_OF_COLOR_FIELDS = 6;
+		public const int NUMBER_OF_STEPS = 12;
+		
 		/// <summary>
 		/// Returns a consistent index into an array size NUMBER_OF_COLORS.
 		/// </summary>
