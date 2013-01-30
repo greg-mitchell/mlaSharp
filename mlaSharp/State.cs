@@ -104,7 +104,10 @@ namespace mlaSharp
 				break;
 			case Steps.draw:
 				Hands[PlayersTurn].Add(env.Libraries[PlayersTurn].Draw());
-				
+				if(PlayersTurn is ConsolePlayer)
+				{
+					Console.WriteLine(PlayersTurn.Name + " drew " + Hands[PlayersTurn].Last().Name + " for turn.");
+				}
 				// while dealing with simplified game, skip priority pass
 				MoveToNextStep();
 				break;
@@ -178,6 +181,8 @@ namespace mlaSharp
 			   || env.AttackersToBlockersDictionary.Count == 0)
 				return;
 			
+			int damageDealtToPlayer = 0;
+			int creaturesUnblocked = 0;
 			foreach(CreatureCard attacker in env.AttackersToBlockersDictionary.Keys)
 			{
 				// unblocked
@@ -185,9 +190,11 @@ namespace mlaSharp
 				   || env.AttackersToBlockersDictionary[attacker].Count() == 0)
 				{
 					this.LifeTotals[env.DefendingPlayer] -= attacker.P;
-					Console.WriteLine(env.DefendingPlayer.Name + " takes " + attacker.P + " putting him at " + LifeTotals[env.DefendingPlayer]);
+					damageDealtToPlayer += attacker.P;
+					creaturesUnblocked++;
 					continue;
 				}
+				
 				
 				// deal damage to each blocker sequentially and from each blocker to the attacker
 				int damageToDeal = attacker.P;
@@ -206,6 +213,10 @@ namespace mlaSharp
 					attacker.DamageMarked += blocker.P;
 				}
 			}
+			
+			if(damageDealtToPlayer > 0)
+				Console.WriteLine(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",env.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[env.DefendingPlayer]));
+					
 		}
 	}
 }

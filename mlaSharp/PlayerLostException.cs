@@ -8,7 +8,7 @@ namespace mlaSharp
 	/// </summary>
 	public class PlayerLostException : Exception, ISerializable
 	{
-		Player losingPlayer;
+		public Player losingPlayer;
 		
 		public PlayerLostException (string message)
 			: base(message)

@@ -42,5 +42,33 @@ namespace CardDatabase
 			Owner = owner;
 		}
 	}
+	
+	[Card("Grey Ogre")]
+	public class GreyOgre : CreatureCard
+	{
+		internal GreyOgre()
+			: base("Grey Ogre", "Creature - Giant", "2R", "", 2, 2)
+		{ }
+		
+		public GreyOgre(Player owner)
+			: this()
+		{
+			Owner = owner;
+		}		
+	}
+	
+	[Card("Hill Giant")]
+	public class HillGiant : CreatureCard
+	{
+		internal HillGiant()
+			: base("Hill Giant", "Creature - Giant", "3R", "", 3, 3)
+		{ }
+		
+		public HillGiant(Player owner)
+			: this()
+		{
+			Owner = owner;
+		}		
+	}
 }
 

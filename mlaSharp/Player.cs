@@ -45,13 +45,10 @@ namespace mlaSharp
 		public abstract ISet<CreatureCard> ChooseAttackers(IList<CreatureCard> possibleAttackers);
 		
 		/// <summary>
-		/// Asks the player to choose the blockers.
+		/// Chooses the blockers.
 		/// </summary>
-		/// <returns>
-		/// The dictionary from attackers to their blockers.
-		/// </returns>
-		/// <param name='chosenAttackers'>
-		/// Chosen attackers.
+		/// <param name='attackersToBlockersDictionary'>
+		/// Attackers to blockers dictionary.
 		/// </param>
 		/// <param name='possibleBlockers'>
 		/// Possible blockers.

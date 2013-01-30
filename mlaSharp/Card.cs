@@ -40,6 +40,12 @@ namespace mlaSharp
 		
 		public override string ToString ()
 		{
+			if (Controller != null)
+				return Controller.ToString() + "'s " + Name;
+			
+			if (Owner != null)
+				return Owner.ToString() + "'s " + Name;
+			
 			return Name;
 		}
 		

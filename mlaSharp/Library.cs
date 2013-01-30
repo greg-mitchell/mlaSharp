@@ -30,6 +30,18 @@ namespace mlaSharp
 				}
 			}
 			
+			// sanity checking
+			for(int i = 0; i < newLib.Count; i++)
+			{
+				for ( int j = i + 1; j < newLib.Count; j++)
+				{
+					if(newLib[i] == newLib[j])
+					{
+						throw new Exception("Card " + i + " and " + j + " are duplicates in " + newLib.Owner.Name + "'s library");	
+					}
+				}
+			}
+			
 			return newLib;
 		}
 		
@@ -67,7 +79,7 @@ namespace mlaSharp
 				throw new PlayerLostException("Drawing a card with no cards left in library",null,Owner);	
 			}
 			
-			var cards = this.Take(x);
+			var cards = this.Take(x).ToList();
 			this.RemoveRange(0,x);
 			return cards;
 		}

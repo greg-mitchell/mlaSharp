@@ -17,7 +17,7 @@ namespace mlaSharp
 		public IDictionary<CreatureCard,IList<CreatureCard>> AttackersToBlockersDictionary { get; private set; }		
 		public Player DefendingPlayer {get; private set;}
 		private Dictionary<Player,int> initialHandSize;
-		private Random rng;
+		public Random rng;
 		
 		private List<Player> lostPlayers;
 		
@@ -31,6 +31,19 @@ namespace mlaSharp
 		public List<ActionDescriptionTuple> EnumActions(Player p)
 		{
 			var actions = new List<ActionDescriptionTuple>();
+			
+			// sanity checking
+			for(int i = 0; i < CurrState.Hands[CurrState.PlayerWithPriority].Count; i++)
+			{
+				for ( int j = i + 1; j < CurrState.Hands[CurrState.PlayerWithPriority].Count; j++)
+				{
+					if(CurrState.Hands[CurrState.PlayerWithPriority][i] == CurrState.Hands[CurrState.PlayerWithPriority][j])
+					{
+						throw new Exception("Card " + i + " and " + j + " are duplicates in " + CurrState.PlayerWithPriority.Name + "'s hand");	
+					}
+				}
+			}
+			
 			// if the stack is empty, and that player has priority
 			if(p == CurrState.PlayersTurn 
 			   && p == CurrState.PlayerWithPriority 
@@ -48,7 +61,7 @@ namespace mlaSharp
 				// for convience, an end turn action is available
 				var endTurn = new ActionDescriptionTuple()
 				{
-					GameAction = (Player Player, State s) => {
+					GameAction = (Player player, State s) => {
 						do
 							s.MoveToNextStep();
 						while(s.CurrStep != Steps.main1);
@@ -67,6 +80,7 @@ namespace mlaSharp
 						var lands = from c in CurrState.Hands[CurrState.PlayerWithPriority]
 									where c.Type.Contains("Land") 
 									select c;
+						
 						foreach(Card land in lands)
 						{
 							var actionDescription = new ActionDescriptionTuple()
@@ -80,7 +94,7 @@ namespace mlaSharp
 											s.LandsLeftToPlayThisTurn--;
 										},
 									ActionDescription =
-										"Play a " + land.Name	
+										"Play a " + land.Name + " (land)"	
 								};
 							actions.Add(actionDescription);
 						}
@@ -94,6 +108,7 @@ namespace mlaSharp
 											 where c.Type.Contains("Creature")
 											 where c.Cost.CanCast(floating)
 											 select c;
+					
 					foreach(Card spell in sorcerySpeedSpells)
 					{
 						// this doesn't work for sorceries
@@ -112,7 +127,7 @@ namespace mlaSharp
 										RemoveManaFromPool(s.ManaPools[p],spell.Cost);
 									},
 								ActionDescription =
-									"Cast " + spell.Name	
+									"Cast " + spell.Name + " (creature)"
 							};
 						actions.Add(actionDescription);					
 					}
@@ -160,8 +175,21 @@ namespace mlaSharp
 					
 					if(possibleBlockers.Count() > 0)
 					{
-						DefendingPlayer.ChooseBlockers(AttackersToBlockersDictionary, possibleBlockers);
+						List<CreatureCard> blockersCopy;
+						IDictionary<CreatureCard,IList<CreatureCard>> atbCopy;
+						// query player for legal blocks
+						do
+						{
+							// copy the data structures in case defending player generates invalid blocks
+							blockersCopy = possibleBlockers.ToList();
+							atbCopy = DeepCopyDictionary(AttackersToBlockersDictionary);
+							// query player for blocks
+							DefendingPlayer.ChooseBlockers(atbCopy, blockersCopy);
+						} while (!LegalBlocks(atbCopy));
+						
+						AttackersToBlockersDictionary = atbCopy;
 						p.OrderBlockers(AttackersToBlockersDictionary);
+						
 					}
 				}
 				
@@ -224,7 +252,16 @@ namespace mlaSharp
 			Libraries[p] = deck;			
 		}
 		
-		public void StartGame()
+		/// <summary>
+		/// Starts the game.
+		/// </summary>
+		/// <returns>
+		/// The winning player, or null if the game ends in a draw.
+		/// </returns>
+		/// <exception cref='NotImplementedException'>
+		/// Is thrown when a requested operation is not implemented for a given type.
+		/// </exception>
+		public Player StartGame()
 		{
 			if(Players.Count != 2)
 				throw new NotImplementedException("The game engine currently only supports exactly 2 players");
@@ -236,7 +273,7 @@ namespace mlaSharp
 			int k = playOrder[0];
 			currentPlayerIndex = k;
 			
-			System.Console.WriteLine(String.Format("Game started.  Player {0} plays first.",k+1,Players[k].Name));
+			System.Console.WriteLine(String.Format("Game started.  Player {1} plays first.",k+1,Players[k].Name));
 			
 			// initialize state
 			CurrState = new State(this);
@@ -282,38 +319,27 @@ namespace mlaSharp
 				if(!p.MulliganHand())
 				{
 					notKept.Remove (p);
-					
-					var handlist = hand.ToList();
-					// sanity checking
-					for(int a = 0; a < handlist.Count; a++)
-					{
-						Card ca, cb;
-						ca = handlist[a];
-						for( int b = a+1; b < handlist.Count; b++)
-						{
-							cb = handlist[b];
-							if(ca == cb)
-								throw new Exception("One card is a reference to another");
-						}
-					}
 				}
-				else
+				else if (--initialHandSize[p] <= 0)
 				{
-					initialHandSize[p]--;
+					notKept.Remove(p);
 				}				
 				
 				
 				j = (j+1) %  ((notKept.Count > 0) ? notKept.Count : 1);	
 			}
 			
-			MainGameLoop();
+			return MainGameLoop();
 		}
 		
 		/// <summary>
 		/// The main game loop.
 		/// On every iteration, checks state-based actions, then polls the player with priority for an action.
 		/// </summary>
-		private void MainGameLoop()
+		/// <returns>
+		/// The winning player, or null if a draw.
+		/// </returns>
+		private Player MainGameLoop()
 		{
 			while(true)
 			{
@@ -339,18 +365,25 @@ namespace mlaSharp
 				
 				} catch(PlayerLostException ex)
 				{
-					
+					Player p = ex.losingPlayer;
+					Console.WriteLine(String.Format("Player {0} lost from decking!",p.Name));
+					lostPlayers.Add(p);
+					Players.Remove(p);
 				}
 				
 				// if no more than 1 player is left, the game has ended
 				if(Players.Count <= 1)
 				{
+					Player winningPlayer = null;
 					if(Players.Count == 0)
 						Console.WriteLine("The game ends in a draw.");
 					else
-						Console.WriteLine("Player {0} has won!",Players.First().Name);
+					{
+						winningPlayer = Players.First();
+						Console.WriteLine("Player {0} has won!",winningPlayer.Name);
+					}
 					
-					break;
+					return winningPlayer;
 				}
 				
 				// because there is no priority passing right now, simply resolve the stack if it's not empty
@@ -359,6 +392,9 @@ namespace mlaSharp
 					Resolve(CurrState.Stack.First());	
 				}
 			}
+			
+			//throw new ApplicationException("Should not have reached this code point, invalid exit from main loop");
+			return null;
 		}
 		
 		/// <summary>
@@ -392,6 +428,18 @@ namespace mlaSharp
 			}
 			
 			/// TODO: check for other SBAs
+			
+			// debug : sanity check battlefield for duplicates
+			for(int i = 0; i < CurrState.Battlefield.Count; i++)
+			{
+				for ( int j = i + 1; j < CurrState.Battlefield.Count; j++)
+				{
+					if(CurrState.Battlefield[i] == CurrState.Battlefield[j])
+					{
+						throw new Exception("Battlefield should not have duplicates");	
+					}
+				}
+			}
 		}
 		
 		/// <summary>
@@ -473,6 +521,51 @@ namespace mlaSharp
 			*/
 			spell.ResolutionAction(spell.Owner,CurrState);
 			CurrState.Stack.Remove(spell);
+		}
+		
+		private bool LegalBlocks(IDictionary<CreatureCard,IList<CreatureCard>> attackersToBlockersDictionary)
+		{
+			// doesn't take into account creatures that can block multiple attackers, banding, etc
+			HashSet<CreatureCard> creaturesInCombat = new HashSet<CreatureCard>();
+			foreach(CreatureCard attacker in attackersToBlockersDictionary.Keys)
+			{
+				if(!creaturesInCombat.Add(attacker))
+				{
+					Console.WriteLine("Illegal block!");
+					return false;
+				}
+				foreach(var blocker in attackersToBlockersDictionary[attacker])
+				{
+					if(!creaturesInCombat.Add(blocker))
+					{
+						Console.WriteLine("Illegal block!");
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+		
+		/// <summary>
+		/// Deep-copies dictionary, creating new references for the block lists.
+		/// </summary>
+		/// <returns>
+		/// The copied dictionary.
+		/// </returns>
+		/// <param name='dict'>
+		/// Dictionary to copy.
+		/// </param>
+		/// <remarks>
+		/// Use this instead of the copy constructor when the value references have to be distinct.
+		/// </remarks>
+		public IDictionary<CreatureCard, IList<CreatureCard>> DeepCopyDictionary (IDictionary<CreatureCard, IList<CreatureCard>> dict)
+		{
+			var copy = new Dictionary<CreatureCard,IList<CreatureCard>>();
+			foreach(var key in dict.Keys)
+			{
+				copy[key] = new List<CreatureCard>(dict[key]);
+			}
+			return copy;
 		}
 		
 		/// <summary>
