@@ -18,12 +18,21 @@ namespace mlaSharp
 		public ColorsEnum Colors { get; set;}
 		public StatusEnum Status { get; set;}
 		public int ControlTimestamp { get; set; }
+		public long UniqueID { get; private set; }
 		
 		public List<Ability> ActivatedAbilities { get; private set;}
 		public List<Ability> TriggeredAbilities { get; private set;}
 		public List<Ability> StaticAbilities { get; private set;}
 		
+		private static long instanceCount = 0;
+		
+		public Card()
+		{
+			instanceCount++;
+			this.UniqueID = instanceCount;
+		}
 		public Card (string name, string type, string manaCost, string text)
+			:this()
 		{
 			ActivatedAbilities = new List<Ability>();
 			TriggeredAbilities = new List<Ability>();

@@ -152,11 +152,17 @@ namespace mlaSharp
 						var chosenAttackers = p.ChooseAttackers(possibleAttackers);
 						
 						// create attackers to blockers dictionary that will be passed to defending player
+						string attackersMsg = "Player " + p.Name + " attacks with ";
 						AttackersToBlockersDictionary = new Dictionary<CreatureCard,IList<CreatureCard>>();
+						
 						foreach(var creature in chosenAttackers)
 						{
 							AttackersToBlockersDictionary[creature] = new List<CreatureCard>();
+							
+							attackersMsg += creature.Name + ", ";
 						}
+						if(chosenAttackers.Count > 0)
+							Console.WriteLine(attackersMsg);
 						DefendingPlayer = Players[(currentPlayerIndex + 1) % Players.Count];
 					}
 				}
@@ -190,6 +196,22 @@ namespace mlaSharp
 						AttackersToBlockersDictionary = atbCopy;
 						p.OrderBlockers(AttackersToBlockersDictionary);
 						
+						// display blocks
+						string blockersMsg = "Player " + DefendingPlayer.Name + " blocks:\n";
+						foreach(var attacker in AttackersToBlockersDictionary.Keys)
+						{
+							// only display attackers that are blocked
+							if(AttackersToBlockersDictionary[attacker].Count > 0)
+							{
+								blockersMsg += attacker.Name + " is blocked by ";
+								foreach(var blockers in AttackersToBlockersDictionary[attacker])
+								{
+									blockersMsg += blockers.Name + ", ";	
+								}
+								blockersMsg += "\n";
+							}
+						}
+						Console.Write(blockersMsg);
 					}
 				}
 				
