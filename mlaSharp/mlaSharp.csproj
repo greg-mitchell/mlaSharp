@@ -54,6 +54,7 @@
     <Compile Include="PlayerLostException.cs" />
     <Compile Include="shared.cs" />
     <Compile Include="RandomPlayer.cs" />
+    <Compile Include="MctsPlayer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

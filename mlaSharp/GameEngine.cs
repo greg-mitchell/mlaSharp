@@ -18,8 +18,10 @@ namespace mlaSharp
 		public Player DefendingPlayer {get; private set;}
 		private Dictionary<Player,int> initialHandSize;
 		public Random rng;
+		public Player StartingPlayer;
 		
 		private List<Player> lostPlayers;
+		
 		
 		public GameEngine ()
 		{
@@ -294,7 +296,8 @@ namespace mlaSharp
 			playOrder.Shuffle(rng);
 			int k = playOrder[0];
 			currentPlayerIndex = k;
-			
+			this.StartingPlayer = Players[k];
+				
 			System.Console.WriteLine(String.Format("Game started.  Player {1} plays first.",k+1,Players[k].Name));
 			
 			// initialize state
