@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using mlaSharp;
+using log4net;
+using System.Reflection;
 
 namespace mlaSharp
 {
@@ -22,7 +24,9 @@ namespace mlaSharp
 		public Dictionary<Player,List<Card>> Graveyards { get; private set; }
 		
 		
-		private GameEngine env;
+		private GameEngine env;		
+		private readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
 		
 		public State (GameEngine env)
 		{			
@@ -215,7 +219,7 @@ namespace mlaSharp
 			}
 			
 			if(damageDealtToPlayer > 0)
-				Console.WriteLine(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",env.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[env.DefendingPlayer]));
+				logger.Debug(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",env.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[env.DefendingPlayer]));
 					
 		}
 	}

@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
+using log4net;
+using log4net.Config;
+using System.Reflection;
 
 namespace mlaSharp
 {
+	
 	class MainClass
 	{
+		private static readonly ILog logger = LogManager.GetLogger( MethodBase.GetCurrentMethod().DeclaringType);
+		
 		public static void Main (string[] args)
 		{
-			const int GAMES_TO_PLAY = 1000;
+			
+			const int GAMES_TO_PLAY = 5000;
 			
 			string[] names = {"joe", "bob"};
 			string[] decklists = {"35 Hill Giant\n25 Mountain",
@@ -21,7 +28,7 @@ namespace mlaSharp
 				winsOnPlay[s] = 0;
 			}
 			
-			Console.WriteLine("mlaSharp : Magic the Gathering Learning Agent");
+			logger.Info("mlaSharp : Magic the Gathering Learning Agent");
 			for(int iterations = 0; iterations< GAMES_TO_PLAY; iterations++)
 			{
 				GameEngine env = new GameEngine();
@@ -63,7 +70,7 @@ namespace mlaSharp
 //					}
 					
 					env.AddPlayer(player,lib);
-					Console.WriteLine("Player " + player.Name + " created!");
+					logger.Debug("Player " + player.Name + " created!");
 				}
 				Player winner = env.StartGame();
 				if(winner != null)
@@ -84,7 +91,7 @@ namespace mlaSharp
 				winsOnPlayCount = winsOnPlay[s];
 				winPercent = (double)winsCount / GAMES_TO_PLAY;
 				winOnPlayPercent = (double)winsOnPlayCount / winsCount;
-				Console.WriteLine(String.Format("Player {0} won {1} times ({2}%), {3} times on the play ({4}%).",s,winsCount,winPercent,winsOnPlayCount,winOnPlayPercent));
+				logger.Info(String.Format("Player {0} won {1} times ({2:f2}%), {3} times on the play ({4:f2}%).",s,winsCount,winPercent,winsOnPlayCount,winOnPlayPercent));
 			}
 		}
 	}

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using log4net;
+using System.Reflection;
 
 namespace mlaSharp
 {
@@ -10,6 +12,8 @@ namespace mlaSharp
 	{
 		public string Name { get; private set;}
 		public GameEngine Env { get; private set;}
+		
+		protected readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 		
 		public Player (GameEngine env, string name = "")
 		{

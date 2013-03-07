@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using log4net;
+using log4net.Config;
+using System.Reflection;
 
 namespace mlaSharp
 {
@@ -21,13 +24,14 @@ namespace mlaSharp
 		public Player StartingPlayer;
 		
 		private List<Player> lostPlayers;
+		private readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 		
 		
 		public GameEngine ()
 		{
 			Players = new List<Player>();
 			Libraries = new Dictionary<Player, Library>();
-			rng = new CryptoRandom();
+			rng = new CryptoRandom();			
 		}
 		
 		public List<ActionDescriptionTuple> EnumActions(Player p)
@@ -164,7 +168,7 @@ namespace mlaSharp
 							attackersMsg += creature.Name + ", ";
 						}
 						if(chosenAttackers.Count > 0)
-							Console.WriteLine(attackersMsg);
+							logger.Debug(attackersMsg);
 						DefendingPlayer = Players[(currentPlayerIndex + 1) % Players.Count];
 					}
 				}
@@ -213,7 +217,7 @@ namespace mlaSharp
 								blockersMsg += "\n";
 							}
 						}
-						Console.Write(blockersMsg);
+						logger.Debug(blockersMsg);
 					}
 				}
 				
@@ -298,7 +302,7 @@ namespace mlaSharp
 			currentPlayerIndex = k;
 			this.StartingPlayer = Players[k];
 				
-			System.Console.WriteLine(String.Format("Game started.  Player {1} plays first.",k+1,Players[k].Name));
+			logger.Info(String.Format("Game started.  Player {1} plays first.",k+1,Players[k].Name));
 			
 			// initialize state
 			CurrState = new State(this);
@@ -374,7 +378,7 @@ namespace mlaSharp
 				{
 					foreach(Player p in losingPlayers)
 					{
-						Console.WriteLine(String.Format("Player {0} lost!",p.Name));
+						logger.Info(String.Format("Player {0} lost!",p.Name));
 						lostPlayers.Add(p);
 						Players.Remove(p);
 					}
@@ -391,7 +395,7 @@ namespace mlaSharp
 				} catch(PlayerLostException ex)
 				{
 					Player p = ex.losingPlayer;
-					Console.WriteLine(String.Format("Player {0} lost from decking!",p.Name));
+					logger.Info(String.Format("Player {0} lost from decking!",p.Name));
 					lostPlayers.Add(p);
 					Players.Remove(p);
 				}
@@ -401,11 +405,11 @@ namespace mlaSharp
 				{
 					Player winningPlayer = null;
 					if(Players.Count == 0)
-						Console.WriteLine("The game ends in a draw.");
+						logger.Info("The game ends in a draw.");
 					else
 					{
 						winningPlayer = Players.First();
-						Console.WriteLine("Player {0} has won!",winningPlayer.Name);
+						logger.Info(String.Format("Player {0} has won!",winningPlayer.Name));
 					}
 					
 					return winningPlayer;
@@ -449,7 +453,7 @@ namespace mlaSharp
 				// TODO: check dying triggers?
 				
 				// for debugging, print deaths
-				Console.WriteLine(c.Name + ", owned by " + c.Owner + ", died.");
+				logger.Debug(c.Name + ", owned by " + c.Owner + ", died.");
 			}
 			
 			/// TODO: check for other SBAs
@@ -556,14 +560,14 @@ namespace mlaSharp
 			{
 				if(!creaturesInCombat.Add(attacker))
 				{
-					Console.WriteLine("Illegal block!");
+					logger.Debug("Illegal block!");
 					return false;
 				}
 				foreach(var blocker in attackersToBlockersDictionary[attacker])
 				{
 					if(!creaturesInCombat.Add(blocker))
 					{
-						Console.WriteLine("Illegal block!");
+						logger.Debug("Illegal block!");
 						return false;
 					}
 				}

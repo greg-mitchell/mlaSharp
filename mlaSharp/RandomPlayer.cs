@@ -44,7 +44,7 @@ namespace mlaSharp
 				{
 					if(a.ActionDescription.Contains("Play") && a.ActionDescription.Contains("land"))
 					{
-						Console.WriteLine(String.Format("Player {0} plays a land for turn",this.Name));
+						logger.Debug(String.Format("Player {0} plays a land for turn",this.Name));
 						return a.GameAction;
 					}
 				}
@@ -55,7 +55,7 @@ namespace mlaSharp
 					{
 						// strip "Cast " from beginning of action description and "(creature)" from end
 						int sublength = a.ActionDescription.LastIndexOf('(') - 5;
-						Console.WriteLine(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
+						logger.Debug(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
 						castingSpell = false;
 						return a.GameAction;
 					}
