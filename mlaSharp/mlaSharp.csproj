@@ -58,11 +58,16 @@
     <Compile Include="shared.cs" />
     <Compile Include="RandomPlayer.cs" />
     <Compile Include="MctsPlayer.cs" />
+    <Compile Include="mcts\MctsNode.cs" />
+    <Compile Include="mcts\Mcts.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="log4net.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="mcts\" />
   </ItemGroup>
 </Project>

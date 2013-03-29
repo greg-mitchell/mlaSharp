@@ -1,17 +1,20 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="mlaSharp/Main.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="mlaSharp/mcts/Mcts.cs">
     <Files>
       <File FileName="mlaSharp/Card.cs" Line="48" Column="4" />
       <File FileName="mlaSharp/ConsolePlayer.cs" Line="119" Column="23" />
       <File FileName="mlaSharp/Library.cs" Line="25" Column="1" />
       <File FileName="mlaSharp/ManaPool.cs" Line="51" Column="93" />
-      <File FileName="mlaSharp/Main.cs" Line="14" Column="42" />
+      <File FileName="mlaSharp/Main.cs" Line="35" Column="31" />
       <File FileName="mlaSharp/RandomPlayer.cs" Line="47" Column="49" />
       <File FileName="mlaSharp/GameEngine.cs" Line="27" Column="33" />
       <File FileName="mlaSharp/log4net.config" Line="10" Column="55" />
       <File FileName="mlaSharp/Player.cs" Line="21" Column="19" />
       <File FileName="mlaSharp/State.cs" Line="28" Column="3" />
+      <File FileName="mlaSharp/MctsPlayer.cs" Line="8" Column="4" />
+      <File FileName="mlaSharp/mcts/MctsNode.cs" Line="21" Column="24" />
+      <File FileName="mlaSharp/mcts/Mcts.cs" Line="49" Column="40" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
