@@ -13,7 +13,7 @@ namespace mlaSharp
 		public override bool MulliganHand()
 		{
 			Console.Write("Player " + this.Name + "'s Hand:");
-			foreach(Card c in Env.GetCurrState().Hands[this])
+			foreach(Card c in Env.CurrState.Hands[this])
 				Console.Write(String.Format("\n\t{0},",c.Name));
 			Console.WriteLine();
 			while(true)
@@ -202,7 +202,7 @@ namespace mlaSharp
 				// "state"
 				if(arg.StartsWith( "stat"))
 				{
-					Console.Write(Env.GetCurrState().PrintState());
+					Console.Write(Env.CurrState.PrintState());
 				}
 				// "battlefield", "field", "play"
 				else if(arg.StartsWith("b") || arg.StartsWith("f") || arg.StartsWith("p"))
@@ -210,7 +210,7 @@ namespace mlaSharp
 					foreach(Player p in Env.Players)
 					{
 						Console.WriteLine("Player " + p.Name + "'s board:");
-						var controlledCards = from c in this.Env.GetCurrState().Battlefield
+						var controlledCards = from c in this.Env.CurrState.Battlefield
 												where c.Controller == p
 												orderby c.Type ascending
 												select c;
@@ -228,14 +228,14 @@ namespace mlaSharp
 				// "stack"
 				else if(arg.StartsWith("stac"))
 				{
-					if(Env.GetCurrState().Stack.Count == 0)
+					if(Env.CurrState.Stack.Count == 0)
 						Console.WriteLine("Stack is empty.");
 					else
 					{
 						Console.WriteLine("Top");
-						for(int i = Env.GetCurrState().Stack.Count - 1; i >= 0; i--)
+						for(int i = Env.CurrState.Stack.Count - 1; i >= 0; i--)
 						{
-							Console.WriteLine(Env.GetCurrState().Stack[i].Text + ",");
+							Console.WriteLine(Env.CurrState.Stack[i].Text + ",");
 						}
 						Console.WriteLine("Bottom");
 					}
@@ -244,7 +244,7 @@ namespace mlaSharp
                 else if (arg.StartsWith("ha"))
                 {
                     Console.WriteLine(this.Name + "'s hand:");
-                    foreach (Card c in Env.GetCurrState().Hands[this])
+                    foreach (Card c in Env.CurrState.Hands[this])
                     {
                         Console.Write(c.Name + ", ");
                     }
@@ -327,7 +327,7 @@ namespace mlaSharp
 		
 		private void PrintActions(IList<ActionDescriptionTuple> actions)
 		{		
-			Console.WriteLine("Step is " + Env.GetCurrState().CurrStep.ToString() + ".  " + this.Name + ", Select Action:");
+			Console.WriteLine("Step is " + Env.CurrState.CurrStep.ToString() + ".  " + this.Name + ", Select Action:");
 			for(int i = 0; i < actions.Count(); i++)
 				Console.Write("\n\t" + i + ":" + actions[i].ActionDescription);	
 			Console.WriteLine();

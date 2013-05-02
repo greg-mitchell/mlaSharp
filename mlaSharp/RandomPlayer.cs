@@ -3,6 +3,10 @@ using System.Collections.Generic;
 
 namespace mlaSharp
 {
+	/// <summary>
+	/// Random player.
+	/// Chooses randomly from among possible actions.
+	/// </summary>
 	public class RandomPlayer : Player
 	{
 		private double pMulligan, pLand, pSpell, pAttack, pBlock;
@@ -44,7 +48,7 @@ namespace mlaSharp
 				{
 					if(a.ActionDescription.Contains("Play") && a.ActionDescription.Contains("land"))
 					{
-						logger.Debug(String.Format("Player {0} plays a land for turn",this.Name));
+						Console.WriteLine(String.Format("Player {0} plays a land for turn",this.Name));
 						return a.GameAction;
 					}
 				}
@@ -55,7 +59,7 @@ namespace mlaSharp
 					{
 						// strip "Cast " from beginning of action description and "(creature)" from end
 						int sublength = a.ActionDescription.LastIndexOf('(') - 5;
-						logger.Debug(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
+						Console.WriteLine(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
 						castingSpell = false;
 						return a.GameAction;
 					}
@@ -93,17 +97,6 @@ namespace mlaSharp
 		
 		public override void ChooseBlockers (IDictionary<CreatureCard, IList<CreatureCard>> attackersToBlockersDictionary, IList<CreatureCard> possibleBlockers)
 		{
-			// debug : sanity check blockers for duplicates
-			for(int i = 0; i < possibleBlockers.Count; i++)
-			{
-				for ( int j = i + 1; j < possibleBlockers.Count; j++)
-				{
-					if(possibleBlockers[i] == possibleBlockers[j])
-					{
-						throw new Exception("Blockers should not have duplicates");	
-					}
-				}
-			}
 			
 			// for each attacker, randomly determine if blocking using pBlock, then determine how many blockers
 			foreach(var attacker in attackersToBlockersDictionary.Keys)

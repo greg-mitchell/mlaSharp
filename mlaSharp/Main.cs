@@ -14,11 +14,11 @@ namespace mlaSharp
 		public static void Main (string[] args)
 		{
 			
-			const int GAMES_TO_PLAY = 5000;
+			const int GAMES_TO_PLAY = 1;
 			
 			string[] names = {"joe", "bob"};
-			string[] decklists = {"35 Hill Giant\n25 Mountain",
-				"35 Hill Giant\n25 Mountain"
+			string[] decklists = {"20 Goblin Piker\n20 Grey Ogre\n20 Mountain",
+				"20 Grey Ogre\n15 Hill Giant\n25 Mountain"
 			};
 			Dictionary<string,int> wins = new Dictionary<string, int>();
 			Dictionary<string,int> winsOnPlay = new Dictionary<string, int>();
@@ -34,16 +34,21 @@ namespace mlaSharp
 				GameEngine env = new GameEngine();
 				for(int i = 0; i < 2; i++)
 				{
+#if RANDOM_PLAYERS					
+					Player player = new RandomPlayer(env,env.rng,names[i]);
+#elif MCTS_PLAYERS
+					Player player = new MctsPlayer(env,names[i]);
+#else
+//					Console.WriteLine("Player " + i + " name: ");
+//					Console.Write("mla> ");
+//					string name = Console.In.ReadLine();
+					Player player = new ConsolePlayer(env,names[i]);
+#endif
 					
 	#if INPUT_DECKLISTS
-					Console.WriteLine("Player " + i + " name: ");
-					Console.Write("mla> ");
-					string name = Console.In.ReadLine();
-					Player player = new ConsolePlayer(env,name);
 					Console.Write("Decklist path:\nmla> ");
 					string decklistPath = Console.In.ReadLine ();
 	#else
-					Player player = new RandomPlayer(env,env.rng,names[i]);
 					string decklistPath = null;
 	#endif				
 					Library lib = null;
@@ -55,19 +60,6 @@ namespace mlaSharp
 					{
 						throw new NotImplementedException("Custom decklists not currently implemented");	
 					}
-//					
-//					// sanity checking
-//					for(int a = 0; a < lib.Count; a++)
-//					{
-//						Card ca, cb;
-//						ca = lib[a];
-//						for( int b = a+1; b < lib.Count; b++)
-//						{
-//							cb = lib[b];
-//							if(ca == cb)
-//								throw new Exception("One card is a reference to another");
-//						}
-//					}
 					
 					env.AddPlayer(player,lib);
 					logger.Debug("Player " + player.Name + " created!");

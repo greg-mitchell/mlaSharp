@@ -60,6 +60,7 @@
     <Compile Include="MctsPlayer.cs" />
     <Compile Include="mcts\MctsNode.cs" />
     <Compile Include="mcts\Mcts.cs" />
+    <Compile Include="BlockDescription.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

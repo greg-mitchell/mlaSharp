@@ -21,22 +21,22 @@ namespace mlaSharp
 		public Dictionary<Player,ManaPool> ManaPools { get; private set; }
 		public Dictionary<Player,int> LifeTotals { get; private set; }
 		public Dictionary<Player,List<Card>> Hands { get; private set; }
-		public Dictionary<Player,List<Card>> Graveyards { get; private set; }
-		
+		public Dictionary<Player,List<Card>> Graveyards { get; private set; }		
+		public Dictionary<Player,Library> Libraries { get; set; }
 		
 		private GameEngine env;		
 		private readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
 		
 		public State (GameEngine env)
 		{			
-			TurnNumber = 1;
+			TurnNumber = 0;
 			Battlefield = new List<Card>();
 			Stack = new List<StackObject>();
 			ManaPools = new Dictionary<Player, ManaPool>();
 			LifeTotals = new Dictionary<Player, int>();
 			Hands = new Dictionary<Player, List<Card>>();
 			Graveyards = new Dictionary<Player, List<Card>>();
+			Libraries = new Dictionary<Player, Library>();
 			
 			this.env = env;
 		}
@@ -107,7 +107,7 @@ namespace mlaSharp
 				MoveToNextStep();
 				break;
 			case Steps.draw:
-				Hands[PlayersTurn].Add(env.Libraries[PlayersTurn].Draw());
+				Hands[PlayersTurn].Add(Libraries[PlayersTurn].Draw());
 				if(PlayersTurn is ConsolePlayer)
 				{
 					Console.WriteLine(PlayersTurn.Name + " drew " + Hands[PlayersTurn].Last().Name + " for turn.");
@@ -125,7 +125,7 @@ namespace mlaSharp
 			case Steps.endCombat:
 				if(env.AttackersToBlockersDictionary != null)
 					env.AttackersToBlockersDictionary.Clear();
-								
+				AttackersDeclared = BlockersDeclared = false;
 				// while dealing with simplified game, skip priority pass
 				MoveToNextStep();
 				break;
@@ -222,6 +222,94 @@ namespace mlaSharp
 				logger.Debug(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",env.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[env.DefendingPlayer]));
 					
 		}
-	}
+		
+		/// <summary>
+		/// Determines whether this instance is an equivalent state the specified other.
+		/// </summary>
+		/// <returns>
+		/// <c>true</c> if this instance is an equivalent state the specified other; otherwise, <c>false</c>.
+		/// </returns>
+		/// <param name='other'>
+		/// The other state to compare to.
+		/// </param>
+		public bool IsEquivalentState(State other)
+		{
+			if(other == this)
+				return true;
+			
+			bool eq;
+			eq = CurrStep == other.CurrStep
+				&& PlayersTurn == other.PlayersTurn
+				&& PlayerWithPriority == other.PlayerWithPriority
+				&& AttackersDeclared == other.AttackersDeclared
+				&& BlockersDeclared == other.BlockersDeclared
+				&& LandsLeftToPlayThisTurn == other.LandsLeftToPlayThisTurn
+				&& TurnNumber == other.TurnNumber
+				&& Battlefield.Count == other.Battlefield.Count
+				&& Stack.Count == other.Stack.Count;
+			
+			if( !eq)
+				return false;
+			
+			foreach(Card c in Battlefield)
+			{
+				eq &= other.Battlefield.Contains(c);	
+			}
+			foreach(StackObject so in Stack)
+			{
+				eq &= other.Stack.Contains(so);
+			}
+			foreach(Player p in ManaPools.Keys)
+			{
+				if(!other.ManaPools.ContainsKey(p))
+					return false;
+				
+				eq &= ManaPools[p] == other.ManaPools[p]
+					&& LifeTotals[p] == other.LifeTotals[p];
+				
+				foreach(Card c in Hands[p])
+				{
+					eq &= other.Hands[p].Contains(c);
+				}
+				foreach(Card c in Graveyards[p])
+				{
+					eq &= other.Graveyards[p].Contains(c);
+				}
+			}
+			return eq;
+		}
+		
+		public override int GetHashCode()
+		{
+			int hash;
+			hash = CurrStep.GetHashCode() 
+				^ PlayersTurn.GetHashCode()
+				^ PlayerWithPriority.GetHashCode()
+				^ AttackersDeclared.GetHashCode()
+				^ BlockersDeclared.GetHashCode()
+				^ AttackersDeclared.GetHashCode()
+				^ BlockersDeclared.GetHashCode()
+				^ LandsLeftToPlayThisTurn
+				^ TurnNumber
+				^ Battlefield.Count
+				^ Stack.Count;
+			
+			return hash;
+		}
+		
+		
+		public class StateEqComp : EqualityComparer<State>
+		{
+			public override bool Equals(State s1, State s2)
+			{
+				return s1.IsEquivalentState(s2);
+			}
+			
+			public override int GetHashCode(State s)
+			{
+				return s.GetHashCode();
+			}
+		}
+	}		
 }
 
