@@ -14,7 +14,7 @@ namespace mlaSharp
 		public static void Main (string[] args)
 		{
 			
-			const int GAMES_TO_PLAY = 1;
+			const int GAMES_TO_PLAY = 1000;
 			
 			string[] names = {"joe", "bob"};
 			string[] decklists = {"20 Goblin Piker\n20 Grey Ogre\n20 Mountain",

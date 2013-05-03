@@ -20,8 +20,21 @@ namespace mlaSharp
 		private MctsNode bestChildSoFar;
 		private MctsNode root;
 		private bool keepSearching;
-		private GameEngine simulationEngine;
+		private GameEngine stateMachine,simulationEngine;
 		private Dictionary<State,List<GameActionDelegate>> actionsFromState;
+		private int playerToMoveIndex;
+		
+		/// <summary>
+		/// Initializes a new instance of the <see cref="mlaSharp.MctsEvaluator"/> class.
+		/// </summary>
+		/// <param name='ge'>
+		/// Ge.
+		/// </param>
+		public MctsEvaluator(GameEngine ge)
+			: this(ge, null, null, null,null)
+		{
+			
+		}
 		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="mlaSharp.MctsEvaluator"/> class.  Each function has a default implementation in this class.
@@ -38,7 +51,7 @@ namespace mlaSharp
 		/// <param name='backpropFunc'>
 		/// Backprop func.
 		/// </param>
-		public MctsEvaluator (GameEngine ge, Func<MctsNode,MctsNode> selectFunc = null, Func<MctsNode,IList<GameActionDelegate>,MctsNode> expandFunc = null, Func<MctsNode,double> simulateFunc = null, Action<MctsNode,double> backpropFunc = null)
+		public MctsEvaluator (GameEngine ge, Func<MctsNode,MctsNode> selectFunc, Func<MctsNode,IList<GameActionDelegate>,MctsNode> expandFunc, Func<MctsNode,double> simulateFunc, Action<MctsNode,double> backpropFunc)
 		{
 			SelectFunc = selectFunc ?? SelectLeaf;
 			ExpandFunc = expandFunc ?? ExpandNode;
@@ -49,30 +62,33 @@ namespace mlaSharp
 			{
 				var sec = new State.StateEqComp();
 				actionsFromState = new Dictionary<State, List<GameActionDelegate>>(sec);
-				simulationEngine = ge.Clone();
+				stateMachine = ge.Clone();
 				ge.SimulationMode = true;
 			}
 		}		
 		
 		/// <summary>
-		/// Finds the best child of the MCTS game tree in the allotted time budget.
+		/// Finds the best child action of the MCTS game tree in the allotted time budget.
 		/// </summary>
 		/// <returns>
-		/// The best child found.
+		/// The best action found
 		/// </returns>
-		/// <param name='root'>
-		/// Root node of the MCTS tree.
+		/// <param name='rootState'>
+		/// State to start the search from
 		/// </param>
 		/// <param name='budget_ms'>
 		/// The amount of time in the computation budget, in ms
 		/// </param>
-		public MctsNode FindBestChild(MctsNode root, int budget_ms)
+		public GameActionDelegate FindBestChild(State rootState, int budget_ms)
 		{
 			const int JOIN_TIMEOUT_MS = 50;
-			
+			this.root = new MctsNode() {
+				GameState = rootState
+			};			
 			this.bestChildSoFar = null;
-			this.root = root;
 			this.keepSearching = true;
+			this.playerToMoveIndex = rootState.HostGameEngine.Players.IndexOf(rootState.PlayerWithPriority);
+			this.simulationEngine = rootState.HostGameEngine.CloneToNewPlayers<RandomPlayer>();
 			
 			// spawn a new thread to perform the search
 			Thread t = new Thread(new ThreadStart(MctsLoop));
@@ -83,7 +99,7 @@ namespace mlaSharp
 			t.Join(JOIN_TIMEOUT_MS);
 			t.Abort();
 			
-			return bestChildSoFar;
+			return bestChildSoFar.ActionTaken;
 		}
 		
 		protected void MctsLoop()
@@ -97,7 +113,7 @@ namespace mlaSharp
 					BackpropFunc(leaf,delta);
 				}
 			}
-			catch (ThreadAbortException ex)
+			catch (ThreadAbortException)
 			{
 				logger.Debug("Aborted MCTS search thread.");
 			}
@@ -146,8 +162,8 @@ namespace mlaSharp
 			}
 			else
 			{
-				simulationEngine.CurrState = s;
-				var actionDescriptions = simulationEngine.EnumActions(s.PlayerWithPriority);
+				stateMachine.CurrState = s;
+				var actionDescriptions = stateMachine.EnumActions(s.PlayerWithPriority);
 				actions = actionDescriptions.Select((ad) => ad.GameAction).ToList();
 				actionsFromState[s] = actions;
 			}
@@ -204,16 +220,21 @@ namespace mlaSharp
 		{
 			// choose an untried action from node
 			GameActionDelegate untriedAction = null;
+			LinkedList<MctsNode> childrenToVerify = new LinkedList<MctsNode>(node.Children);
 			foreach(var a in actionsFromState)
 			{
 				bool taken = false;
-				foreach(var child in node.Children)
+				var child = childrenToVerify.First;
+				
+				while(child.Next != null)
 				{
-					if(child.ActionTaken == a)
+					if(child.Value.ActionTaken == a)
 					{
 						taken = true;
+						childrenToVerify.Remove (child);
 						break;
 					}
+					child = child.Next;
 				}
 				if(!taken)
 				{
@@ -226,12 +247,12 @@ namespace mlaSharp
 				throw new ArgumentNullException("Parameter node must not be fully expanded");
 			
 			// create and add the child
-			simulationEngine.CurrState = node.GameState;
-			simulationEngine.PerformAction(untriedAction);
+			stateMachine.CurrState = node.GameState;
+			stateMachine.PerformAction(untriedAction);
 			MctsNode newChild = new MctsNode() 
 			{ 
 				ActionTaken = untriedAction,
-				GameState = simulationEngine.CurrState,
+				GameState = stateMachine.CurrState,
 			};
 			node.Children.Add(newChild);
 			return newChild;
@@ -239,7 +260,14 @@ namespace mlaSharp
 		
 		private double SimulateGames(MctsNode node)
 		{
-			throw new NotImplementedException();
+			Player winner = simulationEngine.StartGame(node.GameState);
+			if(winner == null)
+				return 0.0;
+			int simulatedWinnerIndex = simulationEngine.Players.IndexOf(winner);
+			if(simulatedWinnerIndex == playerToMoveIndex)
+				return 1.0;
+			else
+				return -1.0;
 		}
 		
 		/// <summary>

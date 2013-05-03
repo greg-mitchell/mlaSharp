@@ -10,10 +10,15 @@ namespace mlaSharp
 	/// </summary>
 	public abstract class Player
 	{
-		public string Name { get; private set;}
-		public GameEngine Env { get; private set;}
+		public string Name { get; set;}
+		public GameEngine Env { get; set;}
 		
 		protected readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+		
+		public Player ()
+		{
+			
+		}
 		
 		public Player (GameEngine env, string name = "")
 		{

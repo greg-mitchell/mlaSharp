@@ -13,6 +13,12 @@ namespace mlaSharp
 		private Random rng;
 		private bool castingSpell;
 		
+		public RandomPlayer(GameEngine env, string name)
+			: base (env, name)
+		{
+			this.rng = env.rng;
+		}
+		
 		public RandomPlayer(GameEngine env, Random rng, string name = "", 
 		                    double pMulligan = 0.8, double pLand = 1.0, double pSpell = 0.75, 
 		                    double pAttack = 0.75, double pBlock = 0.75)
@@ -48,7 +54,7 @@ namespace mlaSharp
 				{
 					if(a.ActionDescription.Contains("Play") && a.ActionDescription.Contains("land"))
 					{
-						Console.WriteLine(String.Format("Player {0} plays a land for turn",this.Name));
+						//Console.WriteLine(String.Format("Player {0} plays a land for turn",this.Name));
 						return a.GameAction;
 					}
 				}
@@ -58,8 +64,8 @@ namespace mlaSharp
 					if(a.ActionDescription.Contains("creature") && a.ActionDescription.Contains("Cast"))
 					{
 						// strip "Cast " from beginning of action description and "(creature)" from end
-						int sublength = a.ActionDescription.LastIndexOf('(') - 5;
-						Console.WriteLine(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
+						//int sublength = a.ActionDescription.LastIndexOf('(') - 5;
+						//Console.WriteLine(String.Format("Player {0} plays a {1}",this.Name, a.ActionDescription.Substring(5,sublength)));
 						castingSpell = false;
 						return a.GameAction;
 					}

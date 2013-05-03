@@ -36,6 +36,24 @@ namespace mlaSharp
 			_currState.TurnNumber = -1;
 		}
 		
+		/// <summary>
+		/// Initializes a new instance of the <see cref="mlaSharp.GameEngine"/> class used by CloneToNewPlayers
+		/// </summary>
+		/// <param name='playerCount'>
+		/// Player count.
+		/// </param>
+		/// <param name='rng'>
+		/// Rng.
+		/// </param>
+		private GameEngine (int playerCount, Random rng)
+		{
+			Players = new List<Player>(playerCount);
+			initialHandSize = new Dictionary<Player, int>(playerCount);
+			this.rng = rng;
+			_currState = new State(this);
+			_currState.TurnNumber = -1;
+		}
+		
 		private GameEngine(GameEngine toCopy)
 		{
 			Players = new List<Player>(toCopy.Players);
@@ -84,23 +102,25 @@ namespace mlaSharp
 		public List<ActionDescriptionTuple> EnumActions(Player p)
 		{
 			var actions = new List<ActionDescriptionTuple>();
-						
+					
+			
 			// if the stack is empty, and that player has priority
 			if(p == CurrState.PlayersTurn 
 			   && p == CurrState.PlayerWithPriority 
 			   && CurrState.Stack.Count == 0)
 			{
 							
-				#region Combat
+				#region Attacks
 				// declareAtk
 				if(p == CurrState.PlayersTurn 
 				   && CurrState.CurrStep == Steps.declareAtk
 				   && !CurrState.AttackersDeclared)
-				{
+				{					
 					var possibleAttackers = (from c in CurrState.Battlefield
 						where c.Controller == CurrState.PlayersTurn
 						where c.Type.Contains("Creature")
 						where c.ControlTimestamp < CurrState.TurnNumber	// TODO: represent summoning sickness correctly
+					    where (c.Status & Card.StatusEnum.Tapped) == 0		// i.e. untapped
 						select c as CreatureCard)
 						.ToList();
 					
@@ -135,9 +155,14 @@ namespace mlaSharp
 								{
 									GameAction = (Player player, State s) =>
 										{
-											foreach(CreatureCard c in atkSubsetClosureVariable)
-												AttackersToBlockersDictionary[c] = new List<CreatureCard>();
+											foreach(CreatureCard c in atkSubsetClosureVariable) {
+												AttackersToBlockersDictionary[c] = null;
+												c.Status |= Card.StatusEnum.Tapped;		// TODO: allow for vigilance
+											}
 											// TODO: allow "fast" effects to be played, but for now, skip priority pass
+											
+											// Give "priority" to defending player so they can assign blocks
+											CurrState.PlayerWithPriority = DefendingPlayer;
 											s.MoveToNextStep();
 										},
 									ActionDescription = descSb.ToString()
@@ -163,63 +188,6 @@ namespace mlaSharp
 						}
 						if(chosenAttackers.Count > 0)
 							logger.Debug(attackersMsg);
-					}
-				}
-				
-				if(p == CurrState.PlayersTurn
-				   && CurrState.CurrStep == Steps.declareBlk
-				   && AttackersToBlockersDictionary != null
-				   && AttackersToBlockersDictionary.Count > 0
-				   && !CurrState.BlockersDeclared)
-				{					
-					var possibleBlockers = (from c in CurrState.Battlefield
-						where c.Controller == DefendingPlayer
-						where c.Type.Contains("Creature")
-						select c as CreatureCard)
-						.ToList();	
-					
-					if(possibleBlockers.Count() > 0)
-					{
-						// TODO: make choosing blockers actually consistent, fix this hack
-						// present the list of actions as comprising only of choosing blocks
-						// warning - number of actions is exponential in the number of attackers AND blockers
-						if(true || p is MctsPlayer)
-						{
-							var attackers = AttackersToBlockersDictionary.Keys.ToList();
-							var possibleBlocks = GetPossibleBlocks(attackers,possibleBlockers);
-						}
-						
-						List<CreatureCard> blockersCopy;
-						IDictionary<CreatureCard,IList<CreatureCard>> atbCopy;
-						// query player for legal blocks
-						do
-						{
-							// copy the data structures in case defending player generates invalid blocks
-							blockersCopy = possibleBlockers.ToList();
-							atbCopy = AttackersToBlockersDictionary.DeepCopy();
-							// query player for blocks
-							DefendingPlayer.ChooseBlockers(atbCopy, blockersCopy);
-						} while (!LegalBlocks(atbCopy));
-						
-						AttackersToBlockersDictionary = atbCopy;
-						p.OrderBlockers(AttackersToBlockersDictionary);
-						
-						// display blocks
-						string blockersMsg = "Player " + DefendingPlayer.Name + " blocks:\n";
-						foreach(var attacker in AttackersToBlockersDictionary.Keys)
-						{
-							// only display attackers that are blocked
-							if(AttackersToBlockersDictionary[attacker].Count > 0)
-							{
-								blockersMsg += attacker.Name + " is blocked by ";
-								foreach(var blockers in AttackersToBlockersDictionary[attacker])
-								{
-									blockersMsg += blockers.Name + ", ";	
-								}
-								blockersMsg += "\n";
-							}
-						}
-						logger.Debug(blockersMsg);
 					}
 				}
 				#endregion
@@ -272,8 +240,7 @@ namespace mlaSharp
 								};
 							actions.Add(actionDescription);
 						}
-					}
-					
+					}					
 					
 					// Cast sorceries and creatures
 					// TODO: make this work for sorceries
@@ -311,6 +278,128 @@ namespace mlaSharp
 				
 				
 			}
+			
+			#region Blocks
+			if(CurrState.AttackersDeclared
+			   	   && p == DefendingPlayer
+				   && CurrState.CurrStep == Steps.declareBlk
+				   && !CurrState.BlockersDeclared)
+			{					
+				var possibleBlockers = (from c in CurrState.Battlefield
+					where c.Controller == DefendingPlayer
+					where c.Type.Contains("Creature")
+				    where (c.Status & Card.StatusEnum.Tapped) == 0
+					select c as CreatureCard)
+					.ToList();	
+				
+				if(AttackersToBlockersDictionary == null)
+					throw new NullReferenceException("AttackersToBlockersDictionary was unexpectedly null");
+				
+				if(possibleBlockers.Count() == 0)	// give "priority" back to active player
+				{
+					actions.Add(new ActionDescriptionTuple()
+					           {
+									GameAction = (Player player, State s) =>
+										{
+											CurrState.BlockersDeclared = true;
+											CurrState.PlayerWithPriority = CurrState.PlayersTurn;
+											
+											// TODO: while there are no "fast" effects, skip priority pass
+											CurrState.MoveToNextStep();
+										},
+									ActionDescription = "No blocks"
+					});
+				}
+				else
+				{
+					// TODO: make choosing blockers actually consistent, fix this hack
+					// present the list of actions as comprising only of choosing blocks
+					// warning - number of actions is exponential in the number of attackers AND blockers
+					if(true || p is MctsPlayer)
+					{
+						var attackers = AttackersToBlockersDictionary.Keys.ToList();
+						var possibleBlocks = GetPossibleBlocks(attackers,possibleBlockers);
+						StringBuilder descSb = new StringBuilder();
+						foreach(var block in possibleBlocks)
+						{
+							var blockClosureVariable = block;	// needed so the closures point to distinct subsets instead of just the last
+							descSb.Clear();
+							GameActionDelegate ga = (Player player, State s) => {
+								foreach(var t in blockClosureVariable)
+									AttackersToBlockersDictionary[t.Attacker] = t.Blockers;
+								// TODO: allow "fast" effects to be played, but for now, skip priority pass
+								
+								// give priority back to active player
+								CurrState.PlayerWithPriority = CurrState.PlayersTurn;
+								s.MoveToNextStep();
+							};
+									
+							foreach(var atbTuple in block)
+							{		
+								AttackersToBlockersDictionary[atbTuple.Attacker] = atbTuple.Blockers;
+								descSb.Append("Block ");
+								descSb.Append(atbTuple.Attacker.ToString());
+								descSb.Append(" with ");
+								if(atbTuple.Blockers.Count == 0)
+									descSb.Append("nothing; ");
+								else
+								{
+									foreach(var blocker in atbTuple.Blockers)
+									{
+										descSb.Append(blocker.ToString());
+										descSb.Append(" & ");
+									}
+									descSb.Remove(descSb.Length-3,3);	// remove trailing " & "
+									descSb.Append("; ");
+								}
+							}
+							//descSb.Remove(descSb.Length-2,2);	// remove trailing "; "
+							
+							var possibleBlockDescription = new ActionDescriptionTuple() {
+								GameAction = ga,
+								ActionDescription = descSb.ToString()
+							};
+							actions.Add(possibleBlockDescription);
+						}
+						CurrState.BlockersDeclared = true;
+						
+						return actions;
+					}
+					
+					List<CreatureCard> blockersCopy;
+					IDictionary<CreatureCard,IList<CreatureCard>> atbCopy;
+					// query player for legal blocks
+					do
+					{
+						// copy the data structures in case defending player generates invalid blocks
+						blockersCopy = possibleBlockers.ToList();
+						atbCopy = AttackersToBlockersDictionary.DeepCopy();
+						// query player for blocks
+						DefendingPlayer.ChooseBlockers(atbCopy, blockersCopy);
+					} while (!LegalBlocks(atbCopy));
+					
+					AttackersToBlockersDictionary = atbCopy;
+					p.OrderBlockers(AttackersToBlockersDictionary);
+					
+					// display blocks
+					string blockersMsg = "Player " + DefendingPlayer.Name + " blocks:\n";
+					foreach(var attacker in AttackersToBlockersDictionary.Keys)
+					{
+						// only display attackers that are blocked
+						if(AttackersToBlockersDictionary[attacker].Count > 0)
+						{
+							blockersMsg += attacker.Name + " is blocked by ";
+							foreach(var blockers in AttackersToBlockersDictionary[attacker])
+							{
+								blockersMsg += blockers.Name + ", ";	
+							}
+							blockersMsg += "\n";
+						}
+					}
+					logger.Debug(blockersMsg);
+				}
+			}
+			#endregion
 			
 			// "instant" speed effects, such as activated abilities, instants
 			if( p == CurrState.PlayerWithPriority)
@@ -447,7 +536,7 @@ namespace mlaSharp
 		/// Starts and runs the game to completion from a given starting state.
 		/// </summary>
 		/// <returns>
-		/// The game.
+		/// The winning player, or null if a draw.
 		/// </returns>
 		/// <param name='startingState'>
 		/// Starting state.
@@ -678,7 +767,6 @@ namespace mlaSharp
 		public static IEnumerable<BlockDescription> GetPossibleBlocks (IList<CreatureCard> attackers, IList<CreatureCard> possibleBlockers)
 		{
 			var allBlocksList = new List<BlockDescription>();
-			var attackersToBlock = attackers.PowerSet();
 			var blockersToUse = possibleBlockers.PowerSet();	
 			
 			
@@ -748,6 +836,50 @@ namespace mlaSharp
 		public GameEngine Clone()
 		{
 			return new GameEngine(this);
+		}
+		
+		/// <summary>
+		/// Clones the game engine and current state to new players of type T.
+		/// </summary>
+		/// <returns>
+		/// A new game engine with everything mapped to the new players.
+		/// </returns>
+		/// <param name='T'>
+		/// The type of the new players to create.
+		/// </param>
+		public GameEngine CloneToNewPlayers<T>() where T : Player
+		{
+			
+			GameEngine newEngine = new GameEngine(this.Players.Count,this.rng);
+			newEngine.currentPlayerIndex = currentPlayerIndex;
+			
+			// copy over state
+			for(int i = 0; i < Players.Count; i++)
+			{
+				Player op = Players[i];
+				Player np = Activator.CreateInstance<T>();
+				np.Env = newEngine;
+				np.Name = op.Name;
+				
+				if(op == this.StartingPlayer)
+					newEngine.StartingPlayer = np;
+				if(op == this.DefendingPlayer)
+					newEngine.DefendingPlayer = np;
+				
+				newEngine.Players[i] = np;
+				newEngine.initialHandSize[np] = initialHandSize[op];
+				newEngine._currState.ManaPools[np] = new ManaPool(_currState.ManaPools[op]);	
+				newEngine._currState.LifeTotals[np] = _currState.LifeTotals[op];
+				newEngine._currState.Hands[np] = new List<Card>(_currState.Hands[op]);
+				newEngine._currState.Graveyards[np] = new List<Card>(_currState.Graveyards[op]);
+			}
+			
+			if(AttackersToBlockersDictionary != null)
+				newEngine.AttackersToBlockersDictionary = new Dictionary<CreatureCard, IList<CreatureCard>>(AttackersToBlockersDictionary);
+			if(lostPlayers != null)
+				newEngine.lostPlayers = new List<Player>(lostPlayers);
+			
+			return newEngine;
 		}
 		
 	}

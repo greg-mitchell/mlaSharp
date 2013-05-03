@@ -16,6 +16,7 @@ namespace mlaSharp
 		public bool BlockersDeclared;
 		public int LandsLeftToPlayThisTurn;
 		public int TurnNumber;
+		public GameEngine HostGameEngine;		
 		public List<Card> Battlefield { get; private set;}
 		public List<StackObject> Stack { get; private set;}
 		public Dictionary<Player,ManaPool> ManaPools { get; private set; }
@@ -24,7 +25,6 @@ namespace mlaSharp
 		public Dictionary<Player,List<Card>> Graveyards { get; private set; }		
 		public Dictionary<Player,Library> Libraries { get; set; }
 		
-		private GameEngine env;		
 		private readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 		
 		public State (GameEngine env)
@@ -38,7 +38,7 @@ namespace mlaSharp
 			Graveyards = new Dictionary<Player, List<Card>>();
 			Libraries = new Dictionary<Player, Library>();
 			
-			this.env = env;
+			this.HostGameEngine = env;
 		}
 		
 		/// <summary>
@@ -59,10 +59,10 @@ namespace mlaSharp
 			Hands = new Dictionary<Player, List<Card>>();			
 			Graveyards = new Dictionary<Player, List<Card>>();
 			
-			env = s.env;
+			HostGameEngine = s.HostGameEngine;
 			
 			// deep copy dictionary entries
-			foreach(Player p in s.env.Players)
+			foreach(Player p in s.HostGameEngine.Players)
 			{
 				ManaPools[p] = new ManaPool(s.ManaPools[p]);	
 				LifeTotals[p] = s.LifeTotals[p];
@@ -90,8 +90,8 @@ namespace mlaSharp
 			switch(CurrStep)
 			{
 			case Steps.cleanup:
-				env.currentPlayerIndex = ++env.currentPlayerIndex % env.Players.Count;
-				PlayersTurn = env.Players[env.currentPlayerIndex];
+				HostGameEngine.currentPlayerIndex = ++HostGameEngine.currentPlayerIndex % HostGameEngine.Players.Count;
+				PlayersTurn = HostGameEngine.Players[HostGameEngine.currentPlayerIndex];
 				PlayerWithPriority = PlayersTurn;		
 				LandsLeftToPlayThisTurn = 1;
 				TurnNumber++;
@@ -123,8 +123,8 @@ namespace mlaSharp
 				break;
 				
 			case Steps.endCombat:
-				if(env.AttackersToBlockersDictionary != null)
-					env.AttackersToBlockersDictionary.Clear();
+				if(HostGameEngine.AttackersToBlockersDictionary != null)
+					HostGameEngine.AttackersToBlockersDictionary.Clear();
 				AttackersDeclared = BlockersDeclared = false;
 				// while dealing with simplified game, skip priority pass
 				MoveToNextStep();
@@ -181,19 +181,19 @@ namespace mlaSharp
 		
 		private void DealDamage()
 		{
-			if(env.AttackersToBlockersDictionary == null
-			   || env.AttackersToBlockersDictionary.Count == 0)
+			if(HostGameEngine.AttackersToBlockersDictionary == null
+			   || HostGameEngine.AttackersToBlockersDictionary.Count == 0)
 				return;
 			
 			int damageDealtToPlayer = 0;
 			int creaturesUnblocked = 0;
-			foreach(CreatureCard attacker in env.AttackersToBlockersDictionary.Keys)
+			foreach(CreatureCard attacker in HostGameEngine.AttackersToBlockersDictionary.Keys)
 			{
 				// unblocked
-				if(env.AttackersToBlockersDictionary[attacker] == null
-				   || env.AttackersToBlockersDictionary[attacker].Count() == 0)
+				if(HostGameEngine.AttackersToBlockersDictionary[attacker] == null
+				   || HostGameEngine.AttackersToBlockersDictionary[attacker].Count() == 0)
 				{
-					this.LifeTotals[env.DefendingPlayer] -= attacker.P;
+					this.LifeTotals[HostGameEngine.DefendingPlayer] -= attacker.P;
 					damageDealtToPlayer += attacker.P;
 					creaturesUnblocked++;
 					continue;
@@ -202,7 +202,7 @@ namespace mlaSharp
 				
 				// deal damage to each blocker sequentially and from each blocker to the attacker
 				int damageToDeal = attacker.P;
-				foreach(CreatureCard blocker in env.AttackersToBlockersDictionary[attacker])
+				foreach(CreatureCard blocker in HostGameEngine.AttackersToBlockersDictionary[attacker])
 				{
 					if (blocker.T > damageToDeal)
 					{
@@ -219,7 +219,7 @@ namespace mlaSharp
 			}
 			
 			if(damageDealtToPlayer > 0)
-				logger.Debug(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",env.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[env.DefendingPlayer]));
+				logger.Debug(String.Format("Player {0} takes {1} damage from {2} creatures, putting him to {3}",HostGameEngine.DefendingPlayer.Name, damageDealtToPlayer, creaturesUnblocked,LifeTotals[HostGameEngine.DefendingPlayer]));
 					
 		}
 		
